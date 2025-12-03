@@ -1,0 +1,21 @@
+{
+  "name": "ai-eval-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @platform/web dev",
+    "build": "pnpm --filter @platform/web build",
+    "lint": "pnpm -r lint",
+    "type-check": "pnpm -r type-check",
+    "db:push": "pnpm --filter @platform/web db:push",
+    "db:seed": "pnpm --filter @platform/web db:seed",
+    "db:studio": "pnpm --filter @platform/web db:studio"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=8.0.0"
+  }
+}
