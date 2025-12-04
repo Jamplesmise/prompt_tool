@@ -20,138 +20,79 @@ export type TaskJobResult = {
 // 队列名称
 export const TASK_QUEUE_NAME = 'task-execution'
 
-// 创建任务队列
-export const taskQueue = new Queue<TaskJobData, TaskJobResult>(TASK_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    removeOnComplete: 100,  // 保留最近 100 个完成的任务
-    removeOnFail: 100,      // 保留最近 100 个失败的任务
-    attempts: 1,            // 默认不重试（任务内部有重试机制）
+// 延迟初始化（避免构建时连接）
+let _taskQueue: Queue<TaskJobData, TaskJobResult> | undefined
+let _taskQueueEvents: QueueEvents | undefined
+
+// 创建任务队列（延迟初始化）
+export const taskQueue = new Proxy({} as Queue<TaskJobData, TaskJobResult>, {
+  get(target, prop) {
+    if (!_taskQueue) {
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        throw new Error('Queue not available during build')
+      }
+      _taskQueue = new Queue<TaskJobData, TaskJobResult>(TASK_QUEUE_NAME, {
+        connection: redis,
+        defaultJobOptions: {
+          removeOnComplete: 100,
+          removeOnFail: 100,
+          attempts: 1,
+        },
+      })
+    }
+    return (_taskQueue as any)[prop]
   },
 })
 
-// 队列事件监听（可选，用于日志）
-export const taskQueueEvents = new QueueEvents(TASK_QUEUE_NAME, {
-  connection: redis,
+// 队列事件监听（延迟初始化）
+export const taskQueueEvents = new Proxy({} as QueueEvents, {
+  get(target, prop) {
+    if (!_taskQueueEvents) {
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        throw new Error('QueueEvents not available during build')
+      }
+      _taskQueueEvents = new QueueEvents(TASK_QUEUE_NAME, {
+        connection: redis,
+      })
+    }
+    return (_taskQueueEvents as any)[prop]
+  },
 })
 
 /**
  * 将任务加入队列
  */
-export async function enqueueTask(
-  taskId: string,
-  options?: {
-    priority?: number
-    resumeFrom?: string
-  }
-): Promise<string> {
-  const job = await taskQueue.add(
-    'execute',
-    {
-      taskId,
-      priority: options?.priority,
-      resumeFrom: options?.resumeFrom,
-    },
-    {
-      priority: options?.priority ?? 0,
-      jobId: taskId,  // 使用 taskId 作为 jobId，防止重复入队
-    }
-  )
+export async function addTaskToQueue(data: TaskJobData): Promise<void> {
+  await taskQueue.add('execute-task', data, {
+    priority: data.priority,
+    jobId: data.taskId,  // 使用 taskId 作为 jobId，避免重复
+  })
+}
 
-  return job.id ?? taskId
+/**
+ * 从队列中移除任务
+ */
+export async function removeTaskFromQueue(taskId: string): Promise<void> {
+  const job = await taskQueue.getJob(taskId)
+  if (job) {
+    await job.remove()
+  }
 }
 
 /**
  * 获取队列中的任务状态
  */
-export async function getQueuedTaskStatus(taskId: string): Promise<{
-  exists: boolean
-  state?: string
-  progress?: number
-  position?: number
-}> {
+export async function getQueueJobStatus(taskId: string) {
   const job = await taskQueue.getJob(taskId)
-
-  if (!job) {
-    return { exists: false }
-  }
+  if (!job) return null
 
   const state = await job.getState()
-  const progress = job.progress as number | undefined
-
-  // 获取在队列中的位置
-  let position: number | undefined
-  if (state === 'waiting' || state === 'prioritized') {
-    const waitingJobs = await taskQueue.getWaiting()
-    const index = waitingJobs.findIndex(j => j.id === taskId)
-    position = index >= 0 ? index + 1 : undefined
-  }
-
   return {
-    exists: true,
+    id: job.id,
     state,
-    progress,
-    position,
+    progress: job.progress,
+    attemptsMade: job.attemptsMade,
+    processedOn: job.processedOn,
+    finishedOn: job.finishedOn,
   }
-}
-
-/**
- * 从队列移除任务
- */
-export async function removeFromQueue(taskId: string): Promise<boolean> {
-  const job = await taskQueue.getJob(taskId)
-  if (!job) {
-    return false
-  }
-
-  const state = await job.getState()
-  if (state === 'active') {
-    // 正在执行的任务不能直接移除，需要通过 stop 机制
-    return false
-  }
-
-  await job.remove()
-  return true
-}
-
-/**
- * 获取队列统计信息
- */
-export async function getQueueStats(): Promise<{
-  waiting: number
-  active: number
-  completed: number
-  failed: number
-  delayed: number
-}> {
-  const [waiting, active, completed, failed, delayed] = await Promise.all([
-    taskQueue.getWaitingCount(),
-    taskQueue.getActiveCount(),
-    taskQueue.getCompletedCount(),
-    taskQueue.getFailedCount(),
-    taskQueue.getDelayedCount(),
-  ])
-
-  return { waiting, active, completed, failed, delayed }
-}
-
-/**
- * 暂停队列
- */
-export async function pauseQueue(): Promise<void> {
-  await taskQueue.pause()
-}
-
-/**
- * 恢复队列
- */
-export async function resumeQueue(): Promise<void> {
-  await taskQueue.resume()
-}
-
-/**
- * 清空队列
- */
-export async function clearQueue(): Promise<void> {
-  await taskQueue.obliterate({ force: true })
 }

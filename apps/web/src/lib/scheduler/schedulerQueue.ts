@@ -22,22 +22,35 @@ export type SchedulerJobResult = {
 // 队列名称
 export const SCHEDULER_QUEUE_NAME = 'scheduler'
 
-// 创建调度队列
-export const schedulerQueue = new Queue<SchedulerJobData, SchedulerJobResult>(
-  SCHEDULER_QUEUE_NAME,
-  {
-    connection: redis,
-    defaultJobOptions: {
-      removeOnComplete: 100,
-      removeOnFail: 100,
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5000,
-      },
-    },
-  }
-)
+// 延迟初始化（避免构建时连接）
+let _schedulerQueue: Queue<SchedulerJobData, SchedulerJobResult> | undefined
+
+// 创建调度队列（延迟初始化）
+export const schedulerQueue = new Proxy({} as Queue<SchedulerJobData, SchedulerJobResult>, {
+  get(_, prop) {
+    if (!_schedulerQueue) {
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        throw new Error('SchedulerQueue not available during build')
+      }
+      _schedulerQueue = new Queue<SchedulerJobData, SchedulerJobResult>(
+        SCHEDULER_QUEUE_NAME,
+        {
+          connection: redis,
+          defaultJobOptions: {
+            removeOnComplete: 100,
+            removeOnFail: 100,
+            attempts: 3,
+            backoff: {
+              type: 'exponential',
+              delay: 5000,
+            },
+          },
+        }
+      )
+    }
+    return (_schedulerQueue as any)[prop]
+  },
+})
 
 /**
  * 调度定时任务（添加到延迟队列）
