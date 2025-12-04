@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
           status: 'PENDING',
           config: {
             concurrency: execution?.concurrency ?? 5,
-            timeoutSeconds: execution?.timeoutSeconds ?? 60,
+            timeoutSeconds: execution?.timeoutSeconds ?? 180,
             retryCount: execution?.retryCount ?? 2,
           },
           datasetId,

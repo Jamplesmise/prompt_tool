@@ -7,7 +7,23 @@ import {
   AlertOutlined,
   RightOutlined,
 } from '@ant-design/icons'
-import type { AlertWithRelations, AlertSeverity } from '@platform/shared'
+import type { AlertSeverity, AlertMetric, AlertCondition } from '@platform/shared'
+
+// 告警列表项类型
+type AlertItem = {
+  id: string
+  ruleId: string
+  value: number
+  createdAt: string | Date
+  rule?: {
+    id: string
+    name: string
+    metric: AlertMetric
+    condition: AlertCondition
+    threshold: number
+    severity: AlertSeverity
+  } | null
+}
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
@@ -19,7 +35,7 @@ dayjs.locale('zh-cn')
 const { Text } = Typography
 
 type AlertListProps = {
-  alerts: AlertWithRelations[]
+  alerts: AlertItem[]
   loading?: boolean
   showViewAll?: boolean
 }

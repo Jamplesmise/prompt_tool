@@ -8,6 +8,33 @@ type OverviewStats = {
   datasetCount: number
   taskCountThisWeek: number
   avgPassRate: number | null
+  totalCostThisWeek?: number
+  totalTokensThisWeek?: number
+}
+
+// 趋势数据点类型
+type TrendDataPoint = {
+  date: string
+  executed: number
+  passed: number
+  failed: number
+}
+
+// 趋势数据响应类型
+type TrendDataResponse = {
+  points: Array<{
+    date: string
+    total: number
+    passed: number
+    failed: number
+    avgLatency: number | null
+    totalCost: number
+  }>
+  summary: {
+    totalExecutions: number
+    avgPassRate: number | null
+    totalCost: number
+  }
 }
 
 // 任务状态类型
@@ -69,10 +96,25 @@ export const statsService = {
     const response = await fetch(`${API_BASE}/tasks?pageSize=${limit}&page=1`)
     return response.json()
   },
+
+  // 获取趋势数据
+  async getTrends(
+    range: '7d' | '14d' | '30d' | '60d' | 'custom' = '7d',
+    customRange?: [string, string]
+  ): Promise<ApiResponse<TrendDataResponse>> {
+    let url = `${API_BASE}/stats/trends?range=${range}`
+    if (range === 'custom' && customRange) {
+      url = `${API_BASE}/stats/trends?range=custom&start=${customRange[0]}&end=${customRange[1]}`
+    }
+    const response = await fetch(url)
+    return response.json()
+  },
 }
 
 export type {
   OverviewStats,
+  TrendDataPoint,
+  TrendDataResponse,
   TaskStatus,
   TaskProgress,
   TaskStats,
