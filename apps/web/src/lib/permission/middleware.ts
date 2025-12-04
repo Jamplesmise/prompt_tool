@@ -4,14 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { error, unauthorized, forbidden } from '@/lib/api'
 import { hasPermission } from './permissions'
-import { getProjectIdFromHeader } from '@/lib/project/context'
+import { getTeamIdFromHeader } from '@/lib/team/context'
 import { ERROR_CODES } from '@platform/shared'
-import type { PermissionAction, PermissionResource, ProjectRole } from '@platform/shared'
+import type { PermissionAction, PermissionResource, TeamRole } from '@platform/shared'
 
 export type PermissionContext = {
   userId: string
-  projectId: string
-  role: ProjectRole
+  teamId: string
+  role: TeamRole
 }
 
 // 获取权限上下文
@@ -21,12 +21,12 @@ export async function getPermissionContext(
   const session = await getSession()
   if (!session) return null
 
-  const projectId = getProjectIdFromHeader(request)
-  if (!projectId) return null
+  const teamId = getTeamIdFromHeader(request)
+  if (!teamId) return null
 
-  const membership = await prisma.projectMember.findUnique({
+  const membership = await prisma.teamMember.findUnique({
     where: {
-      projectId_userId: { projectId, userId: session.id },
+      teamId_userId: { teamId, userId: session.id },
     },
   })
 
@@ -34,8 +34,8 @@ export async function getPermissionContext(
 
   return {
     userId: session.id,
-    projectId,
-    role: membership.role as ProjectRole,
+    teamId,
+    role: membership.role as TeamRole,
   }
 }
 
@@ -55,28 +55,28 @@ export function withPermission<T>(
       return NextResponse.json(unauthorized(), { status: 401 })
     }
 
-    const projectId = getProjectIdFromHeader(request)
-    if (!projectId) {
+    const teamId = getTeamIdFromHeader(request)
+    if (!teamId) {
       return NextResponse.json(
-        error(ERROR_CODES.BAD_REQUEST, '缺少项目 ID'),
+        error(ERROR_CODES.BAD_REQUEST, '缺少团队 ID'),
         { status: 400 }
       )
     }
 
-    const membership = await prisma.projectMember.findUnique({
+    const membership = await prisma.teamMember.findUnique({
       where: {
-        projectId_userId: { projectId, userId: session.id },
+        teamId_userId: { teamId, userId: session.id },
       },
     })
 
     if (!membership) {
       return NextResponse.json(
-        error(ERROR_CODES.PROJECT_NOT_FOUND, '项目不存在或无权访问'),
+        error(ERROR_CODES.TEAM_NOT_FOUND, '团队不存在或无权访问'),
         { status: 404 }
       )
     }
 
-    const role = membership.role as ProjectRole
+    const role = membership.role as TeamRole
     if (!hasPermission(role, action, resource)) {
       return NextResponse.json(
         forbidden(`无权执行此操作（需要 ${resource}:${action} 权限）`),
@@ -86,7 +86,7 @@ export function withPermission<T>(
 
     const permContext: PermissionContext = {
       userId: session.id,
-      projectId,
+      teamId,
       role,
     }
 
@@ -108,20 +108,20 @@ export async function checkPermission(
     }
   }
 
-  const projectId = getProjectIdFromHeader(request)
-  if (!projectId) {
+  const teamId = getTeamIdFromHeader(request)
+  if (!teamId) {
     return {
       success: false,
       response: NextResponse.json(
-        error(ERROR_CODES.BAD_REQUEST, '缺少项目 ID'),
+        error(ERROR_CODES.BAD_REQUEST, '缺少团队 ID'),
         { status: 400 }
       ),
     }
   }
 
-  const membership = await prisma.projectMember.findUnique({
+  const membership = await prisma.teamMember.findUnique({
     where: {
-      projectId_userId: { projectId, userId: session.id },
+      teamId_userId: { teamId, userId: session.id },
     },
   })
 
@@ -129,13 +129,13 @@ export async function checkPermission(
     return {
       success: false,
       response: NextResponse.json(
-        error(ERROR_CODES.PROJECT_NOT_FOUND, '项目不存在或无权访问'),
+        error(ERROR_CODES.TEAM_NOT_FOUND, '团队不存在或无权访问'),
         { status: 404 }
       ),
     }
   }
 
-  const role = membership.role as ProjectRole
+  const role = membership.role as TeamRole
   if (!hasPermission(role, action, resource)) {
     return {
       success: false,
@@ -150,7 +150,7 @@ export async function checkPermission(
     success: true,
     context: {
       userId: session.id,
-      projectId,
+      teamId,
       role,
     },
   }

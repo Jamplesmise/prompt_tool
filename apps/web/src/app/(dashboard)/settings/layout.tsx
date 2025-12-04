@@ -9,6 +9,7 @@ import {
   TeamOutlined,
   AuditOutlined,
   SettingOutlined,
+  UsergroupAddOutlined,
 } from '@ant-design/icons'
 import { usePathname, useRouter } from 'next/navigation'
 import { useUserStore } from '@/stores/userStore'
@@ -38,9 +39,14 @@ const menuItems = [
     type: 'divider' as const,
   },
   {
+    key: '/settings/team',
+    icon: <SettingOutlined />,
+    label: '团队设置',
+  },
+  {
     key: '/settings/members',
     icon: <TeamOutlined />,
-    label: '项目成员',
+    label: '团队成员',
   },
   {
     key: '/settings',
@@ -52,6 +58,11 @@ const menuItems = [
 const adminMenuItems = [
   {
     type: 'divider' as const,
+  },
+  {
+    key: '/settings/users',
+    icon: <UsergroupAddOutlined />,
+    label: '用户管理',
   },
   {
     key: '/settings/audit',

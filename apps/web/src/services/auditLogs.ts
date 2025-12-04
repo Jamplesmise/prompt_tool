@@ -9,7 +9,7 @@ type AuditLogListItem = AuditLog & {
     name: string
     email: string
   }
-  project?: {
+  team?: {
     id: string
     name: string
   } | null
@@ -30,7 +30,7 @@ type AuditLogQueryParams = {
   action?: AuditAction
   resource?: AuditResource
   userId?: string
-  projectId?: string
+  teamId?: string
   startDate?: string
   endDate?: string
 }
@@ -44,7 +44,7 @@ export const auditLogsService = {
     if (params?.action) searchParams.set('action', params.action)
     if (params?.resource) searchParams.set('resource', params.resource)
     if (params?.userId) searchParams.set('userId', params.userId)
-    if (params?.projectId) searchParams.set('projectId', params.projectId)
+    if (params?.teamId) searchParams.set('teamId', params.teamId)
     if (params?.startDate) searchParams.set('startDate', params.startDate)
     if (params?.endDate) searchParams.set('endDate', params.endDate)
 

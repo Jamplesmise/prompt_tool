@@ -1,8 +1,8 @@
 /**
- * 数据迁移脚本：将现有数据关联到默认项目
+ * 数据迁移脚本：将现有数据关联到默认团队
  *
  * 运行方式：
- * cd apps/web && npx tsx prisma/scripts/migrateToProjects.ts
+ * cd apps/web && npx tsx prisma/scripts/migrateToTeams.ts
  */
 
 import { PrismaClient } from '@prisma/client'
@@ -12,7 +12,7 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('开始数据迁移...')
 
-  // 1. 查找第一个管理员用户作为默认项目的所有者
+  // 1. 查找第一个管理员用户作为默认团队的所有者
   const adminUser = await prisma.user.findFirst({
     where: { role: 'ADMIN' },
     orderBy: { createdAt: 'asc' },
@@ -23,32 +23,32 @@ async function main() {
     return
   }
 
-  console.log(`使用管理员 ${adminUser.name} (${adminUser.email}) 作为默认项目所有者`)
+  console.log(`使用管理员 ${adminUser.name} (${adminUser.email}) 作为默认团队所有者`)
 
-  // 2. 检查是否已有项目
-  const existingProjectCount = await prisma.project.count()
-  if (existingProjectCount > 0) {
-    console.log(`已存在 ${existingProjectCount} 个项目，跳过创建默认项目`)
+  // 2. 检查是否已有团队
+  const existingTeamCount = await prisma.team.count()
+  if (existingTeamCount > 0) {
+    console.log(`已存在 ${existingTeamCount} 个团队，跳过创建默认团队`)
     return
   }
 
-  // 3. 创建默认项目
-  const defaultProject = await prisma.project.create({
+  // 3. 创建默认团队
+  const defaultTeam = await prisma.team.create({
     data: {
-      name: 'Default Project',
-      description: '默认项目 - 系统自动创建',
+      name: 'Default Team',
+      description: '默认团队 - 系统自动创建',
       ownerId: adminUser.id,
     },
   })
-  console.log(`创建默认项目: ${defaultProject.id}`)
+  console.log(`创建默认团队: ${defaultTeam.id}`)
 
-  // 4. 将所有用户添加为项目成员
+  // 4. 将所有用户添加为团队成员
   const users = await prisma.user.findMany()
   for (const user of users) {
     const role = user.id === adminUser.id ? 'OWNER' : user.role === 'ADMIN' ? 'ADMIN' : 'MEMBER'
-    await prisma.projectMember.create({
+    await prisma.teamMember.create({
       data: {
-        projectId: defaultProject.id,
+        teamId: defaultTeam.id,
         userId: user.id,
         role,
       },
@@ -56,7 +56,7 @@ async function main() {
     console.log(`添加成员: ${user.name} (${role})`)
   }
 
-  // 5. 更新所有资源关联到默认项目
+  // 5. 更新所有资源关联到默认团队
   const tables = [
     { name: 'prompt', model: prisma.prompt },
     { name: 'dataset', model: prisma.dataset },
@@ -70,8 +70,8 @@ async function main() {
 
   for (const table of tables) {
     const result = await (table.model as any).updateMany({
-      where: { projectId: null },
-      data: { projectId: defaultProject.id },
+      where: { teamId: null },
+      data: { teamId: defaultTeam.id },
     })
     console.log(`更新 ${table.name}: ${result.count} 条记录`)
   }
