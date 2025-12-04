@@ -7,12 +7,20 @@ import type {
   CreateDatasetInput,
   UpdateDatasetInput,
   UploadFileInput,
+  CreateDatasetVersionInput,
 } from '@/services/datasets'
 
 // 查询 key
 const DATASETS_KEY = ['datasets']
 const datasetDetailKey = (id: string) => ['datasets', id]
 const datasetRowsKey = (id: string) => ['datasets', id, 'rows']
+const datasetVersionsKey = (id: string) => ['datasets', id, 'versions']
+const datasetVersionDetailKey = (datasetId: string, versionId: string) => [
+  'datasets',
+  datasetId,
+  'versions',
+  versionId,
+]
 
 // 数据集列表
 export function useDatasets(params?: { page?: number; pageSize?: number; keyword?: string }) {
@@ -230,5 +238,128 @@ export function useDeleteDatasetRow() {
     onError: (error: Error) => {
       appMessage.error(error.message || '删除失败')
     },
+  })
+}
+
+// ==================== Phase 10: 版本管理 ====================
+
+// 版本列表
+export function useDatasetVersions(datasetId: string) {
+  return useQuery({
+    queryKey: datasetVersionsKey(datasetId),
+    queryFn: async () => {
+      const response = await datasetsService.versions.list(datasetId)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!datasetId,
+  })
+}
+
+// 版本详情
+export function useDatasetVersion(datasetId: string, versionId: string) {
+  return useQuery({
+    queryKey: datasetVersionDetailKey(datasetId, versionId),
+    queryFn: async () => {
+      const response = await datasetsService.versions.get(datasetId, versionId)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!datasetId && !!versionId,
+  })
+}
+
+// 创建版本快照
+export function useCreateDatasetVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      datasetId,
+      data,
+    }: {
+      datasetId: string
+      data: CreateDatasetVersionInput
+    }) => {
+      const response = await datasetsService.versions.create(datasetId, data)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: datasetVersionsKey(variables.datasetId) })
+      queryClient.invalidateQueries({ queryKey: datasetDetailKey(variables.datasetId) })
+      appMessage.success('版本创建成功')
+    },
+    onError: (error: Error) => {
+      appMessage.error(error.message || '版本创建失败')
+    },
+  })
+}
+
+// 版本数据行
+export function useDatasetVersionRows(
+  datasetId: string,
+  versionId: string,
+  params?: { offset?: number; limit?: number }
+) {
+  return useQuery({
+    queryKey: [...datasetVersionDetailKey(datasetId, versionId), 'rows', params],
+    queryFn: async () => {
+      const response = await datasetsService.versions.getRows(datasetId, versionId, params)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!datasetId && !!versionId,
+  })
+}
+
+// 回滚到指定版本
+export function useRollbackDatasetVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ datasetId, versionId }: { datasetId: string; versionId: string }) => {
+      const response = await datasetsService.versions.rollback(datasetId, versionId)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: datasetVersionsKey(variables.datasetId) })
+      queryClient.invalidateQueries({ queryKey: datasetDetailKey(variables.datasetId) })
+      queryClient.invalidateQueries({ queryKey: datasetRowsKey(variables.datasetId) })
+      appMessage.success('版本回滚成功')
+    },
+    onError: (error: Error) => {
+      appMessage.error(error.message || '版本回滚失败')
+    },
+  })
+}
+
+// 版本对比
+export function useDatasetVersionDiff(
+  datasetId: string,
+  v1: number | undefined,
+  v2: number | undefined
+) {
+  return useQuery({
+    queryKey: ['datasets', datasetId, 'versions', 'diff', v1, v2],
+    queryFn: async () => {
+      const response = await datasetsService.versions.diff(datasetId, v1!, v2!)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!datasetId && v1 !== undefined && v2 !== undefined,
   })
 }

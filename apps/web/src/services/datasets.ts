@@ -1,4 +1,10 @@
-import type { ApiResponse, Dataset, DatasetRow } from '@platform/shared'
+import type {
+  ApiResponse,
+  Dataset,
+  DatasetRow,
+  DatasetVersion,
+  DatasetDiff,
+} from '@platform/shared'
 
 const API_BASE = '/api/v1'
 
@@ -67,6 +73,44 @@ type UploadFileInput = {
   file: File
   isPersistent?: boolean
   fieldMapping?: Record<string, string>
+}
+
+// Phase 10: 版本相关类型
+type DatasetVersionListItem = DatasetVersion & {
+  createdBy: {
+    id: string
+    name: string
+  }
+}
+
+type DatasetVersionDetail = DatasetVersion & {
+  createdBy: {
+    id: string
+    name: string
+  }
+}
+
+type CreateDatasetVersionInput = {
+  changeLog?: string
+}
+
+type DatasetVersionRowsResponse = {
+  rows: Array<{
+    id: string
+    versionId: string
+    rowIndex: number
+    data: Record<string, unknown>
+    hash: string
+  }>
+  total: number
+  offset: number
+  limit: number
+}
+
+type DatasetVersionDiffResponse = {
+  versionA: DatasetVersionListItem
+  versionB: DatasetVersionListItem
+  diff: DatasetDiff
 }
 
 export const datasetsService = {
@@ -197,6 +241,75 @@ export const datasetsService = {
       return response.json()
     },
   },
+
+  // Phase 10: 版本管理
+  versions: {
+    // 获取版本列表
+    async list(datasetId: string): Promise<ApiResponse<DatasetVersionListItem[]>> {
+      const response = await fetch(`${API_BASE}/datasets/${datasetId}/versions`)
+      return response.json()
+    },
+
+    // 获取版本详情
+    async get(datasetId: string, versionId: string): Promise<ApiResponse<DatasetVersionDetail>> {
+      const response = await fetch(`${API_BASE}/datasets/${datasetId}/versions/${versionId}`)
+      return response.json()
+    },
+
+    // 创建版本快照
+    async create(
+      datasetId: string,
+      data: CreateDatasetVersionInput
+    ): Promise<ApiResponse<DatasetVersion>> {
+      const response = await fetch(`${API_BASE}/datasets/${datasetId}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+
+    // 获取版本数据行
+    async getRows(
+      datasetId: string,
+      versionId: string,
+      params?: { offset?: number; limit?: number }
+    ): Promise<ApiResponse<DatasetVersionRowsResponse>> {
+      const searchParams = new URLSearchParams()
+      if (params?.offset) searchParams.set('offset', String(params.offset))
+      if (params?.limit) searchParams.set('limit', String(params.limit))
+
+      const url = `${API_BASE}/datasets/${datasetId}/versions/${versionId}/rows${
+        searchParams.toString() ? `?${searchParams}` : ''
+      }`
+      const response = await fetch(url)
+      return response.json()
+    },
+
+    // 回滚到指定版本
+    async rollback(
+      datasetId: string,
+      versionId: string
+    ): Promise<ApiResponse<{ version: DatasetVersion }>> {
+      const response = await fetch(
+        `${API_BASE}/datasets/${datasetId}/versions/${versionId}/rollback`,
+        { method: 'POST' }
+      )
+      return response.json()
+    },
+
+    // 版本对比
+    async diff(
+      datasetId: string,
+      v1: number,
+      v2: number
+    ): Promise<ApiResponse<DatasetVersionDiffResponse>> {
+      const response = await fetch(
+        `${API_BASE}/datasets/${datasetId}/versions/diff?v1=${v1}&v2=${v2}`
+      )
+      return response.json()
+    },
+  },
 }
 
 export type {
@@ -208,4 +321,10 @@ export type {
   CreateDatasetInput,
   UpdateDatasetInput,
   UploadFileInput,
+  // Phase 10: 版本相关类型
+  DatasetVersionListItem,
+  DatasetVersionDetail,
+  CreateDatasetVersionInput,
+  DatasetVersionRowsResponse,
+  DatasetVersionDiffResponse,
 }

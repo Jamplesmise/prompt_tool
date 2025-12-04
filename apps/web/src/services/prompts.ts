@@ -1,4 +1,11 @@
-import type { ApiResponse, Prompt, PromptVersion, PromptVariable } from '@platform/shared'
+import type {
+  ApiResponse,
+  Prompt,
+  PromptVersion,
+  PromptVariable,
+  PromptBranch,
+  PromptBranchStatus,
+} from '@platform/shared'
 
 const API_BASE = '/api/v1'
 
@@ -120,6 +127,88 @@ type RollbackResponse = {
   prompt: Prompt
 }
 
+// Phase 10: 分支相关类型
+type BranchListItem = PromptBranch & {
+  createdBy: {
+    id: string
+    name: string
+  }
+  mergedBy?: {
+    id: string
+    name: string
+  } | null
+  _count: {
+    versions: number
+  }
+}
+
+type BranchDetail = PromptBranch & {
+  sourceVersion: PromptVersion
+  versions: Array<PromptVersion & {
+    createdBy: {
+      id: string
+      name: string
+    }
+  }>
+  createdBy: {
+    id: string
+    name: string
+  }
+  mergedBy?: {
+    id: string
+    name: string
+  } | null
+}
+
+type CreateBranchInput = {
+  name: string
+  description?: string
+  sourceVersionId: string
+}
+
+type UpdateBranchInput = {
+  name?: string
+  description?: string
+}
+
+type MergeBranchInput = {
+  targetBranchId: string
+  changeLog?: string
+}
+
+type PublishBranchVersionInput = {
+  content: string
+  variables?: PromptVariable[]
+  changeLog?: string
+}
+
+type BranchDiffResponse = {
+  sourceVersion: {
+    id: string
+    version: number
+    content: string
+    variables: PromptVariable[]
+    branchId: string | null
+  }
+  targetVersion: {
+    id: string
+    version: number
+    content: string
+    variables: PromptVariable[]
+    branchId: string | null
+  }
+  contentDiff: string
+  variablesDiff: {
+    added: Array<{ name: string; type: string }>
+    removed: Array<{ name: string; type: string }>
+    modified: Array<{
+      name: string
+      oldValue: { type: string; description?: string }
+      newValue: { type: string; description?: string }
+    }>
+  }
+}
+
 export const promptsService = {
   // 获取提示词列表
   async list(params?: {
@@ -226,6 +315,107 @@ export const promptsService = {
     })
     return response.json()
   },
+
+  // Phase 10: 分支管理
+  branches: {
+    // 获取分支列表
+    async list(promptId: string): Promise<ApiResponse<BranchListItem[]>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches`)
+      return response.json()
+    },
+
+    // 获取分支详情
+    async get(promptId: string, branchId: string): Promise<ApiResponse<BranchDetail>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}`)
+      return response.json()
+    },
+
+    // 创建分支
+    async create(promptId: string, data: CreateBranchInput): Promise<ApiResponse<PromptBranch>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+
+    // 更新分支
+    async update(
+      promptId: string,
+      branchId: string,
+      data: UpdateBranchInput
+    ): Promise<ApiResponse<PromptBranch>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+
+    // 删除分支
+    async delete(promptId: string, branchId: string): Promise<ApiResponse<{ id: string }>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}`, {
+        method: 'DELETE',
+      })
+      return response.json()
+    },
+
+    // 合并分支
+    async merge(
+      promptId: string,
+      branchId: string,
+      data: MergeBranchInput
+    ): Promise<ApiResponse<PromptVersion>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}/merge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+
+    // 归档分支
+    async archive(promptId: string, branchId: string): Promise<ApiResponse<PromptBranch>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}/archive`, {
+        method: 'POST',
+      })
+      return response.json()
+    },
+
+    // 分支对比
+    async diff(
+      promptId: string,
+      sourceBranchId: string,
+      targetBranchId: string
+    ): Promise<ApiResponse<BranchDiffResponse>> {
+      const response = await fetch(
+        `${API_BASE}/prompts/${promptId}/branches/diff?source=${sourceBranchId}&target=${targetBranchId}`
+      )
+      return response.json()
+    },
+
+    // 获取分支版本列表
+    async listVersions(promptId: string, branchId: string): Promise<ApiResponse<VersionListItem[]>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}/versions`)
+      return response.json()
+    },
+
+    // 在分支上发布新版本
+    async publishVersion(
+      promptId: string,
+      branchId: string,
+      data: PublishBranchVersionInput
+    ): Promise<ApiResponse<PromptVersion>> {
+      const response = await fetch(`${API_BASE}/prompts/${promptId}/branches/${branchId}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+  },
 }
 
 export type {
@@ -241,4 +431,12 @@ export type {
   UpdatePromptInput,
   PublishVersionInput,
   RollbackResponse,
+  // Phase 10: 分支相关类型
+  BranchListItem,
+  BranchDetail,
+  CreateBranchInput,
+  UpdateBranchInput,
+  MergeBranchInput,
+  PublishBranchVersionInput,
+  BranchDiffResponse,
 }
