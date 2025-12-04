@@ -9,7 +9,7 @@ type SettingsState = {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      fontSize: 14,
+      fontSize: 15,
       setFontSize: (size) => set({ fontSize: size }),
     }),
     {
