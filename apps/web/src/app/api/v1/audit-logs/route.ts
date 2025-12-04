@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const action = searchParams.get('action')
     const resource = searchParams.get('resource')
     const userId = searchParams.get('userId')
-    const projectId = searchParams.get('projectId')
+    const teamId = searchParams.get('teamId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     if (action) where.action = action
     if (resource) where.resource = resource
-    if (projectId) where.projectId = projectId
+    if (teamId) where.teamId = teamId
 
     if (startDate || endDate) {
       where.createdAt = {}
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
               email: true,
             },
           },
-          project: {
+          team: {
             select: {
               id: true,
               name: true,

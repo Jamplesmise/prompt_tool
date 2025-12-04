@@ -1,11 +1,18 @@
 import bcrypt from 'bcryptjs'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { prisma } from './prisma'
 import type { UserSession } from '@platform/shared'
 
 const SALT_ROUNDS = 10
 const SESSION_COOKIE_NAME = 'session_token'
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 // 7 天（秒）
+
+// API Token 认证结果
+export type ApiTokenAuth = {
+  type: 'api_token'
+  userId: string
+  scopes: string[]
+}
 
 // 密码哈希
 export async function hashPassword(password: string): Promise<string> {
@@ -48,8 +55,21 @@ export async function createSession(userId: string): Promise<string> {
   return token
 }
 
-// 获取当前会话
+// 获取当前会话（支持 Cookie Session 和 Bearer Token）
 export async function getSession(): Promise<UserSession | null> {
+  // 1. 先检查 Bearer Token
+  const headerStore = await headers()
+  const authHeader = headerStore.get('authorization')
+
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    const tokenAuth = await validateBearerToken(token)
+    if (tokenAuth) {
+      return tokenAuth
+    }
+  }
+
+  // 2. 回退到 Cookie Session
   const cookieStore = await cookies()
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)
 
@@ -83,6 +103,56 @@ export async function getSession(): Promise<UserSession | null> {
       name: user.name,
       role: user.role as UserSession['role'],
     }
+  } catch {
+    return null
+  }
+}
+
+// 验证 Bearer Token
+async function validateBearerToken(token: string): Promise<UserSession | null> {
+  // 检查格式
+  if (!token.startsWith('sk-')) {
+    return null
+  }
+
+  try {
+    // 查找所有未过期的 Token
+    const apiTokens = await prisma.apiToken.findMany({
+      where: {
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+          },
+        },
+      },
+    })
+
+    // 逐个验证（因为我们存储的是哈希值）
+    for (const apiToken of apiTokens) {
+      const isMatch = await bcrypt.compare(token, apiToken.tokenHash)
+      if (isMatch) {
+        // 更新最后使用时间
+        await prisma.apiToken.update({
+          where: { id: apiToken.id },
+          data: { lastUsedAt: new Date() },
+        })
+
+        return {
+          id: apiToken.user.id,
+          email: apiToken.user.email,
+          name: apiToken.user.name,
+          role: apiToken.user.role as UserSession['role'],
+        }
+      }
+    }
+
+    return null
   } catch {
     return null
   }

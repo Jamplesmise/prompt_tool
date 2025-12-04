@@ -1,8 +1,8 @@
-// 项目管理相关类型
+// 团队管理相关类型
 
-export type ProjectRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
+export type TeamRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
 
-export type Project = {
+export type Team = {
   id: string
   name: string
   description: string | null
@@ -12,7 +12,7 @@ export type Project = {
   updatedAt: Date
 }
 
-export type ProjectWithOwner = Project & {
+export type TeamWithOwner = Team & {
   owner: {
     id: string
     name: string
@@ -21,23 +21,23 @@ export type ProjectWithOwner = Project & {
   }
 }
 
-export type ProjectWithMemberCount = Project & {
+export type TeamWithMemberCount = Team & {
   _count: {
     members: number
   }
 }
 
-export type ProjectMember = {
+export type TeamMember = {
   id: string
-  projectId: string
+  teamId: string
   userId: string
-  role: ProjectRole
+  role: TeamRole
   invitedById: string | null
   createdAt: Date
   updatedAt: Date
 }
 
-export type ProjectMemberWithUser = ProjectMember & {
+export type TeamMemberWithUser = TeamMember & {
   user: {
     id: string
     name: string
@@ -50,21 +50,21 @@ export type ProjectMemberWithUser = ProjectMember & {
   } | null
 }
 
-export type CreateProjectInput = {
+export type CreateTeamInput = {
   name: string
   description?: string
   avatar?: string
 }
 
-export type UpdateProjectInput = Partial<CreateProjectInput>
+export type UpdateTeamInput = Partial<CreateTeamInput>
 
 export type InviteMemberInput = {
   email: string
-  role: ProjectRole
+  role: TeamRole
 }
 
 export type UpdateMemberRoleInput = {
-  role: ProjectRole
+  role: TeamRole
 }
 
 export type TransferOwnershipInput = {
@@ -109,7 +109,7 @@ export type AuditAction =
 
 export type AuditResource =
   | 'user'
-  | 'project'
+  | 'team'
   | 'member'
   | 'prompt'
   | 'dataset'
@@ -129,7 +129,7 @@ export type AuditLog = {
   resourceId: string | null
   details: Record<string, unknown> | null
   userId: string
-  projectId: string | null
+  teamId: string | null
   ipAddress: string | null
   userAgent: string | null
   createdAt: Date
@@ -147,7 +147,7 @@ export type AuditLogFilter = {
   action?: AuditAction
   resource?: AuditResource
   userId?: string
-  projectId?: string
+  teamId?: string
   startDate?: Date
   endDate?: Date
 }
@@ -168,11 +168,11 @@ export type PermissionResource =
   | 'evaluator'
   | 'task'
   | 'member'
-  | 'project'
+  | 'team'
   | 'settings'
 
 export type PermissionMatrix = {
-  [role in ProjectRole]: {
+  [role in TeamRole]: {
     [resource in PermissionResource]: PermissionAction[]
   }
 }

@@ -38,7 +38,7 @@ const actionColors: Record<AuditAction, string> = {
 
 const resourceLabels: Record<AuditResource, string> = {
   user: '用户',
-  project: '项目',
+  team: '团队',
   member: '成员',
   prompt: '提示词',
   dataset: '数据集',
@@ -124,10 +124,10 @@ export default function AuditPage() {
       render: (id: string | null) => id || '-',
     },
     {
-      title: '项目',
-      key: 'project',
+      title: '团队',
+      key: 'team',
       width: 120,
-      render: (_, record) => record.project?.name || '-',
+      render: (_, record) => record.team?.name || '-',
     },
     {
       title: 'IP 地址',

@@ -130,8 +130,8 @@ export const SCHEDULED_TASK_DEFAULTS = {
   TIMEZONE: 'Asia/Shanghai',
 } as const
 
-// Phase 9: 项目角色
-export const ProjectRoleEnum = {
+// Phase 9: 团队角色
+export const TeamRoleEnum = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
@@ -162,7 +162,7 @@ export const AuditActionEnum = {
 // Phase 9: 审计日志资源类型
 export const AuditResourceEnum = {
   USER: 'user',
-  PROJECT: 'project',
+  TEAM: 'team',
   MEMBER: 'member',
   PROMPT: 'prompt',
   DATASET: 'dataset',
@@ -194,6 +194,6 @@ export const PermissionResourceEnum = {
   EVALUATOR: 'evaluator',
   TASK: 'task',
   MEMBER: 'member',
-  PROJECT: 'project',
+  TEAM: 'team',
   SETTINGS: 'settings',
 } as const

@@ -1,9 +1,9 @@
 // 权限矩阵定义
-import type { ProjectRole, PermissionAction, PermissionResource } from '@platform/shared'
+import type { TeamRole, PermissionAction, PermissionResource } from '@platform/shared'
 
 // 权限矩阵
 const PERMISSION_MATRIX: Record<
-  ProjectRole,
+  TeamRole,
   Record<PermissionResource, PermissionAction[]>
 > = {
   OWNER: {
@@ -13,7 +13,7 @@ const PERMISSION_MATRIX: Record<
     evaluator: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
     task: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
     member: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
-    project: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
+    team: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
     settings: ['view', 'create', 'edit', 'delete', 'execute', 'manage'],
   },
   ADMIN: {
@@ -23,7 +23,7 @@ const PERMISSION_MATRIX: Record<
     evaluator: ['view', 'create', 'edit', 'delete', 'execute'],
     task: ['view', 'create', 'edit', 'delete', 'execute'],
     member: ['view', 'create', 'edit', 'delete', 'manage'],
-    project: ['view', 'edit'],
+    team: ['view', 'edit'],
     settings: ['view', 'edit'],
   },
   MEMBER: {
@@ -33,7 +33,7 @@ const PERMISSION_MATRIX: Record<
     evaluator: ['view', 'create', 'edit', 'execute'],
     task: ['view', 'create', 'edit', 'execute'],
     member: ['view'],
-    project: ['view'],
+    team: ['view'],
     settings: ['view'],
   },
   VIEWER: {
@@ -43,14 +43,14 @@ const PERMISSION_MATRIX: Record<
     evaluator: ['view'],
     task: ['view'],
     member: ['view'],
-    project: ['view'],
+    team: ['view'],
     settings: ['view'],
   },
 }
 
 // 检查权限
 export function hasPermission(
-  role: ProjectRole,
+  role: TeamRole,
   action: PermissionAction,
   resource: PermissionResource
 ): boolean {
@@ -65,14 +65,14 @@ export function hasPermission(
 
 // 获取角色的所有权限
 export function getRolePermissions(
-  role: ProjectRole
+  role: TeamRole
 ): Record<PermissionResource, PermissionAction[]> {
   return PERMISSION_MATRIX[role] || {}
 }
 
 // 获取角色优先级（用于比较）
-export function getRolePriority(role: ProjectRole): number {
-  const priorities: Record<ProjectRole, number> = {
+export function getRolePriority(role: TeamRole): number {
+  const priorities: Record<TeamRole, number> = {
     OWNER: 0,
     ADMIN: 1,
     MEMBER: 2,
@@ -83,8 +83,8 @@ export function getRolePriority(role: ProjectRole): number {
 
 // 检查是否可以修改目标用户
 export function canModifyMember(
-  operatorRole: ProjectRole,
-  targetRole: ProjectRole
+  operatorRole: TeamRole,
+  targetRole: TeamRole
 ): boolean {
   // 只有优先级更高的角色才能修改目标角色
   return getRolePriority(operatorRole) < getRolePriority(targetRole)

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
-import { success, error, unauthorized, notFound, forbidden, badRequest } from '@/lib/api'
+import { success, error, unauthorized, forbidden, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
-import type { ProjectRole } from '@platform/shared'
+import type { TeamRole } from '@platform/shared'
 
 type Params = { params: Promise<{ id: string; userId: string }> }
 
-// PUT /api/v1/projects/[id]/members/[userId] - 修改成员角色
+// PUT /api/v1/teams/[id]/members/[userId] - 修改成员角色
 export async function PUT(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession()
@@ -15,18 +15,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
       return NextResponse.json(unauthorized(), { status: 401 })
     }
 
-    const { id: projectId, userId: targetUserId } = await params
+    const { id: teamId, userId: targetUserId } = await params
 
     // 检查用户是否有管理成员的权限
-    const membership = await prisma.projectMember.findUnique({
+    const membership = await prisma.teamMember.findUnique({
       where: {
-        projectId_userId: { projectId, userId: session.id },
+        teamId_userId: { teamId, userId: session.id },
       },
     })
 
     if (!membership) {
       return NextResponse.json(
-        error(ERROR_CODES.PROJECT_NOT_FOUND, '项目不存在或无权访问'),
+        error(ERROR_CODES.TEAM_NOT_FOUND, '团队不存在或无权访问'),
         { status: 404 }
       )
     }
@@ -36,9 +36,9 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     // 查找目标成员
-    const targetMember = await prisma.projectMember.findUnique({
+    const targetMember = await prisma.teamMember.findUnique({
       where: {
-        projectId_userId: { projectId, userId: targetUserId },
+        teamId_userId: { teamId, userId: targetUserId },
       },
     })
 
@@ -58,18 +58,18 @@ export async function PUT(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json()
-    const { role } = body as { role: ProjectRole }
+    const { role } = body as { role: TeamRole }
 
     // 验证角色
-    const validRoles: ProjectRole[] = ['ADMIN', 'MEMBER', 'VIEWER']
+    const validRoles: TeamRole[] = ['ADMIN', 'MEMBER', 'VIEWER']
     if (!validRoles.includes(role)) {
       return NextResponse.json(badRequest('无效的角色'), { status: 400 })
     }
 
     // 更新角色
-    const updatedMember = await prisma.projectMember.update({
+    const updatedMember = await prisma.teamMember.update({
       where: {
-        projectId_userId: { projectId, userId: targetUserId },
+        teamId_userId: { teamId, userId: targetUserId },
       },
       data: { role },
       include: {
@@ -94,7 +94,7 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 }
 
-// DELETE /api/v1/projects/[id]/members/[userId] - 移除成员
+// DELETE /api/v1/teams/[id]/members/[userId] - 移除成员
 export async function DELETE(request: NextRequest, { params }: Params) {
   try {
     const session = await getSession()
@@ -102,26 +102,26 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json(unauthorized(), { status: 401 })
     }
 
-    const { id: projectId, userId: targetUserId } = await params
+    const { id: teamId, userId: targetUserId } = await params
 
     // 检查用户是否有管理成员的权限
-    const membership = await prisma.projectMember.findUnique({
+    const membership = await prisma.teamMember.findUnique({
       where: {
-        projectId_userId: { projectId, userId: session.id },
+        teamId_userId: { teamId, userId: session.id },
       },
     })
 
     if (!membership) {
       return NextResponse.json(
-        error(ERROR_CODES.PROJECT_NOT_FOUND, '项目不存在或无权访问'),
+        error(ERROR_CODES.TEAM_NOT_FOUND, '团队不存在或无权访问'),
         { status: 404 }
       )
     }
 
     // 查找目标成员
-    const targetMember = await prisma.projectMember.findUnique({
+    const targetMember = await prisma.teamMember.findUnique({
       where: {
-        projectId_userId: { projectId, userId: targetUserId },
+        teamId_userId: { teamId, userId: targetUserId },
       },
     })
 
@@ -135,12 +135,12 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     // 不能移除所有者
     if (targetMember.role === 'OWNER') {
       return NextResponse.json(
-        error(ERROR_CODES.CANNOT_REMOVE_OWNER, '不能移除项目所有者'),
+        error(ERROR_CODES.CANNOT_REMOVE_OWNER, '不能移除团队所有者'),
         { status: 409 }
       )
     }
 
-    // 用户可以移除自己（退出项目）
+    // 用户可以移除自己（退出团队）
     const isSelf = targetUserId === session.id
     // 管理员可以移除其他成员
     const isAdmin = ['OWNER', 'ADMIN'].includes(membership.role)
@@ -150,9 +150,9 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     }
 
     // 移除成员
-    await prisma.projectMember.delete({
+    await prisma.teamMember.delete({
       where: {
-        projectId_userId: { projectId, userId: targetUserId },
+        teamId_userId: { teamId, userId: targetUserId },
       },
     })
 
