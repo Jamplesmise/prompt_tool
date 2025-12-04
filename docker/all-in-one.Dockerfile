@@ -32,7 +32,7 @@ RUN corepack enable pnpm && pnpm --filter @platform/evaluators build
 RUN cd apps/web && npx prisma generate
 
 # 构建 Next.js
-RUN corepack enable pnpm && pnpm build:web
+RUN corepack enable pnpm && pnpm build
 
 # 生产阶段
 FROM base AS runner
