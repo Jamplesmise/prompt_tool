@@ -4,6 +4,7 @@
 
 import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 /**
  * 计算行数据哈希
@@ -65,7 +66,7 @@ export async function createDatasetVersion(
         data: dataset.rows.map((row, index) => ({
           versionId: version.id,
           rowIndex: index,
-          data: row.data,
+          data: row.data as Prisma.InputJsonValue,
           hash: rowHashes[index],
         })),
       })
@@ -161,7 +162,7 @@ export async function rollbackToVersion(
         data: version.rows.map((row) => ({
           datasetId,
           rowIndex: row.rowIndex,
-          data: row.data,
+          data: row.data as Prisma.InputJsonValue,
         })),
       })
     }
@@ -183,8 +184,8 @@ export async function rollbackToVersion(
         version: version.version + 1,
         rowCount: version.rowCount,
         changeLog: `回滚到 v${version.version}`,
-        columns: version.columns,
-        rowHashes: version.rowHashes,
+        columns: version.columns as Prisma.InputJsonValue,
+        rowHashes: version.rowHashes as Prisma.InputJsonValue,
         createdById: userId,
       },
     })
@@ -195,7 +196,7 @@ export async function rollbackToVersion(
         data: version.rows.map((row) => ({
           versionId: newVersion.id,
           rowIndex: row.rowIndex,
-          data: row.data,
+          data: row.data as Prisma.InputJsonValue,
           hash: row.hash,
         })),
       })

@@ -61,7 +61,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuditLogs } from '@/hooks/useAuditLogs'
 import { useRouter } from 'next/navigation'
-import type { UploadProps, ColumnsType } from 'antd/es/table'
+import type { UploadProps } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import type { ApiTokenScope, TeamRole, TeamMemberWithUser, NotifyChannelType } from '@platform/shared'
 import type { AuditLogListItem } from '@/services/auditLogs'
 import type { AuditAction, AuditResource } from '@platform/shared'
@@ -609,7 +610,7 @@ export default function SettingsPage() {
       extra: <Button type="primary" size="small" icon={<PlusOutlined />} onClick={(e) => { e.stopPropagation(); setCreateTokenModalOpen(true) }}>创建</Button>,
       children: (
         <div className={styles.panelContent}>
-          <Table columns={tokenColumns} dataSource={tokenData?.list} rowKey="id" loading={tokenLoading} size="small" pagination={{ current: tokenPage, pageSize: 5, total: tokenData?.total, onChange: setTokenPage, showSizeChanger: false }} />
+          <Table<TokenListItem> columns={tokenColumns} dataSource={tokenData?.list} rowKey="id" loading={tokenLoading} size="small" pagination={{ current: tokenPage, pageSize: 5, total: tokenData?.total, onChange: setTokenPage, showSizeChanger: false }} />
         </div>
       ),
     },
@@ -664,7 +665,7 @@ export default function SettingsPage() {
               <span>成员管理</span>
               {canManageMembers && <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setInviteModalOpen(true)}>邀请</Button>}
             </div>
-            <Table columns={memberColumns} dataSource={membersData?.list} rowKey="id" loading={membersLoading} size="small" pagination={{ current: memberPage, pageSize: 10, total: membersData?.total, onChange: setMemberPage, showSizeChanger: false }} />
+            <Table<TeamMemberWithUser> columns={memberColumns} dataSource={membersData?.list} rowKey="id" loading={membersLoading} size="small" pagination={{ current: memberPage, pageSize: 10, total: membersData?.total, onChange: setMemberPage, showSizeChanger: false }} />
           </div>
           {isTeamOwner && (
             <div className={styles.section}>
@@ -724,7 +725,7 @@ export default function SettingsPage() {
             <Input placeholder="搜索用户" prefix={<SearchOutlined />} value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setUserPage(1) }} style={{ width: 160 }} allowClear />
             <Select placeholder="角色" value={userRoleFilter || undefined} onChange={(v) => { setUserRoleFilter(v || ''); setUserPage(1) }} options={[{ label: '全部', value: '' }, ...userRoleOptions]} style={{ width: 100 }} allowClear />
           </Space>
-          <Table columns={userColumns} dataSource={usersData?.list} rowKey="id" loading={usersLoading} size="small" pagination={{ current: userPage, pageSize: 10, total: usersData?.total, onChange: setUserPage, showSizeChanger: false, showTotal: (t) => `共 ${t} 人` }} />
+          <Table<UserWithCount> columns={userColumns} dataSource={usersData?.list} rowKey="id" loading={usersLoading} size="small" pagination={{ current: userPage, pageSize: 10, total: usersData?.total, onChange: setUserPage, showSizeChanger: false, showTotal: (t) => `共 ${t} 人` }} />
         </div>
       ),
     },
@@ -747,7 +748,7 @@ export default function SettingsPage() {
               setLogPage(1)
             }} />
           </Space>
-          <Table columns={logColumns} dataSource={logsData?.list} rowKey="id" loading={logsLoading} size="small" pagination={{ current: logPage, pageSize: 10, total: logsData?.total, onChange: setLogPage, showSizeChanger: false }} />
+          <Table<AuditLogListItem> columns={logColumns} dataSource={logsData?.list} rowKey="id" loading={logsLoading} size="small" pagination={{ current: logPage, pageSize: 10, total: logsData?.total, onChange: setLogPage, showSizeChanger: false }} />
         </div>
       ),
     },
