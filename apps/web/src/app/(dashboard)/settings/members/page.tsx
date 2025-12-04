@@ -16,16 +16,16 @@ import {
   Popconfirm,
 } from 'antd'
 import { TeamOutlined, PlusOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons'
-import { useProjectStore } from '@/stores/projectStore'
+import { useTeamStore } from '@/stores/teamStore'
 import {
-  useProjectMembers,
+  useTeamMembers,
   useInviteMember,
   useUpdateMemberRole,
   useRemoveMember,
   usePermission,
-} from '@/hooks/useProjects'
+} from '@/hooks/useTeams'
 import type { ColumnsType } from 'antd/es/table'
-import type { ProjectRole, ProjectMemberWithUser } from '@platform/shared'
+import type { TeamRole, TeamMemberWithUser } from '@platform/shared'
 import dayjs from 'dayjs'
 
 const { Title } = Typography
@@ -36,14 +36,14 @@ const roleOptions = [
   { label: '查看者', value: 'VIEWER' },
 ]
 
-const roleColors: Record<ProjectRole, string> = {
+const roleColors: Record<TeamRole, string> = {
   OWNER: 'gold',
   ADMIN: 'blue',
   MEMBER: 'green',
   VIEWER: 'default',
 }
 
-const roleLabels: Record<ProjectRole, string> = {
+const roleLabels: Record<TeamRole, string> = {
   OWNER: '所有者',
   ADMIN: '管理员',
   MEMBER: '成员',
@@ -51,10 +51,10 @@ const roleLabels: Record<ProjectRole, string> = {
 }
 
 export default function MembersPage() {
-  const { currentProject } = useProjectStore()
+  const { currentTeam } = useTeamStore()
   const { canManageMembers, isOwner } = usePermission()
   const [page, setPage] = useState(1)
-  const { data, isLoading } = useProjectMembers(currentProject?.id || '', {
+  const { data, isLoading } = useTeamMembers(currentTeam?.id || '', {
     page,
     pageSize: 10,
   })
@@ -65,15 +65,15 @@ export default function MembersPage() {
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [form] = Form.useForm()
 
-  if (!currentProject) {
+  if (!currentTeam) {
     return (
       <Card>
-        <Typography.Text type="secondary">请先选择一个项目</Typography.Text>
+        <Typography.Text type="secondary">请先选择一个团队</Typography.Text>
       </Card>
     )
   }
 
-  const columns: ColumnsType<ProjectMemberWithUser> = [
+  const columns: ColumnsType<TeamMemberWithUser> = [
     {
       title: '成员',
       key: 'user',
@@ -91,7 +91,7 @@ export default function MembersPage() {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      render: (role: ProjectRole, record) =>
+      render: (role: TeamRole, record) =>
         canManageMembers && role !== 'OWNER' ? (
           <Select
             value={role}
@@ -99,7 +99,7 @@ export default function MembersPage() {
             style={{ width: 100 }}
             onChange={(newRole) =>
               updateRole.mutate({
-                projectId: currentProject.id,
+                teamId: currentTeam.id,
                 userId: record.userId,
                 role: newRole,
               })
@@ -131,7 +131,7 @@ export default function MembersPage() {
             title="确定要移除此成员吗？"
             onConfirm={() =>
               removeMember.mutate({
-                projectId: currentProject.id,
+                teamId: currentTeam.id,
                 userId: record.userId,
               })
             }
@@ -144,10 +144,10 @@ export default function MembersPage() {
     },
   ]
 
-  const handleInvite = async (values: { email: string; role: ProjectRole }) => {
+  const handleInvite = async (values: { email: string; role: TeamRole }) => {
     try {
       await inviteMember.mutateAsync({
-        projectId: currentProject.id,
+        teamId: currentTeam.id,
         data: values,
       })
       setInviteModalOpen(false)
@@ -162,7 +162,7 @@ export default function MembersPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>
           <TeamOutlined style={{ marginRight: 8 }} />
-          项目成员 - {currentProject.name}
+          团队成员 - {currentTeam.name}
         </Title>
         {canManageMembers && (
           <Button

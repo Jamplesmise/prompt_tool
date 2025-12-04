@@ -9,7 +9,7 @@ type LogActionParams = {
   resourceId?: string
   details?: Record<string, unknown>
   userId: string
-  projectId?: string
+  teamId?: string
   request?: Request
 }
 
@@ -23,7 +23,7 @@ export async function logAction(params: LogActionParams): Promise<void> {
         resourceId: params.resourceId || null,
         details: (params.details ?? Prisma.JsonNull) as Prisma.InputJsonValue,
         userId: params.userId,
-        projectId: params.projectId || null,
+        teamId: params.teamId || null,
         ipAddress: params.request?.headers.get('x-forwarded-for')?.split(',')[0] || null,
         userAgent: params.request?.headers.get('user-agent') || null,
       },
@@ -44,7 +44,7 @@ export async function logActions(logs: LogActionParams[]): Promise<void> {
         resourceId: log.resourceId || null,
         details: (log.details ?? Prisma.JsonNull) as Prisma.InputJsonValue,
         userId: log.userId,
-        projectId: log.projectId || null,
+        teamId: log.teamId || null,
         ipAddress: log.request?.headers.get('x-forwarded-for')?.split(',')[0] || null,
         userAgent: log.request?.headers.get('user-agent') || null,
       })),
@@ -69,7 +69,7 @@ export const audit = {
     resource: AuditResource,
     resourceId: string,
     userId: string,
-    projectId?: string,
+    teamId?: string,
     details?: Record<string, unknown>,
     request?: Request
   ) =>
@@ -78,7 +78,7 @@ export const audit = {
       resource,
       resourceId,
       userId,
-      projectId,
+      teamId,
       details,
       request,
     }),
@@ -88,7 +88,7 @@ export const audit = {
     resource: AuditResource,
     resourceId: string,
     userId: string,
-    projectId?: string,
+    teamId?: string,
     details?: Record<string, unknown>,
     request?: Request
   ) =>
@@ -97,7 +97,7 @@ export const audit = {
       resource,
       resourceId,
       userId,
-      projectId,
+      teamId,
       details,
       request,
     }),
@@ -107,7 +107,7 @@ export const audit = {
     resource: AuditResource,
     resourceId: string,
     userId: string,
-    projectId?: string,
+    teamId?: string,
     details?: Record<string, unknown>,
     request?: Request
   ) =>
@@ -116,7 +116,7 @@ export const audit = {
       resource,
       resourceId,
       userId,
-      projectId,
+      teamId,
       details,
       request,
     }),
@@ -126,7 +126,7 @@ export const audit = {
     resource: AuditResource,
     resourceId: string,
     userId: string,
-    projectId?: string,
+    teamId?: string,
     details?: Record<string, unknown>,
     request?: Request
   ) =>
@@ -135,14 +135,14 @@ export const audit = {
       resource,
       resourceId,
       userId,
-      projectId,
+      teamId,
       details,
       request,
     }),
 
   // 邀请成员
   invite: (
-    projectId: string,
+    teamId: string,
     userId: string,
     targetUserId: string,
     role: string,
@@ -153,14 +153,14 @@ export const audit = {
       resource: 'member',
       resourceId: targetUserId,
       userId,
-      projectId,
+      teamId,
       details: { role },
       request,
     }),
 
   // 移除成员
   remove: (
-    projectId: string,
+    teamId: string,
     userId: string,
     targetUserId: string,
     request?: Request
@@ -170,23 +170,23 @@ export const audit = {
       resource: 'member',
       resourceId: targetUserId,
       userId,
-      projectId,
+      teamId,
       request,
     }),
 
   // 转让所有权
   transfer: (
-    projectId: string,
+    teamId: string,
     userId: string,
     newOwnerId: string,
     request?: Request
   ) =>
     logAction({
       action: 'transfer',
-      resource: 'project',
-      resourceId: projectId,
+      resource: 'team',
+      resourceId: teamId,
       userId,
-      projectId,
+      teamId,
       details: { newOwnerId },
       request,
     }),

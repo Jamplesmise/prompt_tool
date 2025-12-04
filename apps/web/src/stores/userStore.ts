@@ -20,6 +20,8 @@ type UserState = {
 type UserActions = {
   setUser: (user: UserInfo | null) => void
   setLoading: (loading: boolean) => void
+  updateAvatar: (avatar: string | null) => void
+  updateName: (name: string) => void
   logout: () => void
 }
 
@@ -40,6 +42,16 @@ export const useUserStore = create<UserStore>()(
         }),
 
       setLoading: (isLoading) => set({ isLoading }),
+
+      updateAvatar: (avatar) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, avatar } : null,
+        })),
+
+      updateName: (name) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, name } : null,
+        })),
 
       logout: () =>
         set({

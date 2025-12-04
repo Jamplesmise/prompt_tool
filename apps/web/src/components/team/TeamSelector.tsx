@@ -2,60 +2,60 @@
 
 import { useState } from 'react'
 import { Dropdown, Avatar, Space, Modal, Form, Input, Button, Spin } from 'antd'
-import { DownOutlined, PlusOutlined, ProjectOutlined } from '@ant-design/icons'
+import { DownOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
-import { useProjectStore } from '@/stores/projectStore'
-import { useProjects, useCreateProject } from '@/hooks/useProjects'
+import { useTeamStore } from '@/stores/teamStore'
+import { useTeams, useCreateTeam } from '@/hooks/useTeams'
 
-export function ProjectSelector() {
-  const { currentProject, projects, setCurrentProject } = useProjectStore()
-  const { isLoading } = useProjects()
-  const createProject = useCreateProject()
+export function TeamSelector() {
+  const { currentTeam, teams, setCurrentTeam } = useTeamStore()
+  const { isLoading } = useTeams()
+  const createTeam = useCreateTeam()
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [form] = Form.useForm()
 
-  if (isLoading && projects.length === 0) {
+  if (isLoading && teams.length === 0) {
     return (
       <Space>
         <Spin size="small" />
-        <span>加载项目...</span>
+        <span>加载团队...</span>
       </Space>
     )
   }
 
-  if (!currentProject) {
+  if (!currentTeam) {
     return (
       <Button type="link" onClick={() => setCreateModalOpen(true)}>
-        <PlusOutlined /> 创建项目
+        <PlusOutlined /> 创建团队
       </Button>
     )
   }
 
   const menuItems: MenuProps['items'] = [
-    ...projects.map((p) => ({
-      key: p.id,
+    ...teams.map((t) => ({
+      key: t.id,
       label: (
         <Space>
           <Avatar
             size="small"
-            src={p.avatar}
-            icon={<ProjectOutlined />}
-            style={{ backgroundColor: p.id === currentProject.id ? '#1890ff' : '#ccc' }}
+            src={t.avatar}
+            icon={<TeamOutlined />}
+            style={{ backgroundColor: t.id === currentTeam.id ? '#1890ff' : '#ccc' }}
           />
-          <span>{p.name}</span>
-          {p.id === currentProject.id && (
+          <span>{t.name}</span>
+          {t.id === currentTeam.id && (
             <span style={{ color: '#1890ff', fontSize: 12 }}>(当前)</span>
           )}
         </Space>
       ),
-      onClick: () => setCurrentProject(p),
+      onClick: () => setCurrentTeam(t),
     })),
     { type: 'divider' as const },
     {
       key: 'create',
       label: (
         <Space>
-          <PlusOutlined /> 创建新项目
+          <PlusOutlined /> 创建新团队
         </Space>
       ),
       onClick: () => setCreateModalOpen(true),
@@ -64,7 +64,7 @@ export function ProjectSelector() {
 
   const handleCreate = async (values: { name: string; description?: string }) => {
     try {
-      await createProject.mutateAsync(values)
+      await createTeam.mutateAsync(values)
       setCreateModalOpen(false)
       form.resetFields()
     } catch {
@@ -78,19 +78,19 @@ export function ProjectSelector() {
         <Space style={{ cursor: 'pointer' }}>
           <Avatar
             size="small"
-            src={currentProject.avatar}
-            icon={<ProjectOutlined />}
+            src={currentTeam.avatar}
+            icon={<TeamOutlined />}
             style={{ backgroundColor: '#1890ff' }}
           />
           <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {currentProject.name}
+            {currentTeam.name}
           </span>
           <DownOutlined style={{ fontSize: 10 }} />
         </Space>
       </Dropdown>
 
       <Modal
-        title="创建新项目"
+        title="创建新团队"
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         footer={null}
@@ -98,14 +98,14 @@ export function ProjectSelector() {
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item
-            label="项目名称"
+            label="团队名称"
             name="name"
-            rules={[{ required: true, message: '请输入项目名称' }]}
+            rules={[{ required: true, message: '请输入团队名称' }]}
           >
-            <Input placeholder="请输入项目名称" />
+            <Input placeholder="请输入团队名称" />
           </Form.Item>
-          <Form.Item label="项目描述" name="description">
-            <Input.TextArea placeholder="请输入项目描述（可选）" rows={3} />
+          <Form.Item label="团队描述" name="description">
+            <Input.TextArea placeholder="请输入团队描述（可选）" rows={3} />
           </Form.Item>
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
@@ -113,7 +113,7 @@ export function ProjectSelector() {
               <Button
                 type="primary"
                 htmlType="submit"
-                loading={createProject.isPending}
+                loading={createTeam.isPending}
               >
                 创建
               </Button>
