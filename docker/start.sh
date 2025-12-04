@@ -9,6 +9,9 @@ if [ "${RUN_MIGRATIONS}" = "true" ]; then
   cd /app/apps/web && npx prisma migrate deploy
 fi
 
+# 禁用 Next.js instrumentation 中的 Worker（我们使用独立进程）
+export DISABLE_INSTRUMENTATION_WORKER=true
+
 # 启动 Worker 进程（后台）
 echo "⚙️ Starting Worker process..."
 cd /app && npx ts-node --transpile-only apps/web/src/worker.ts &

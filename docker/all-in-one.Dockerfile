@@ -17,6 +17,9 @@ RUN corepack enable pnpm && pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+# 设置 Next.js 构建阶段标识（避免在构建时初始化 Worker）
+ENV NEXT_PHASE=phase-production-build
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/packages/evaluators/node_modules ./packages/evaluators/node_modules
