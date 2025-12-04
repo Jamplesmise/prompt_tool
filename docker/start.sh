@@ -14,12 +14,12 @@ export DISABLE_INSTRUMENTATION_WORKER=true
 
 # 启动 Worker 进程（后台）
 echo "⚙️ Starting Worker process..."
-cd /app && npx ts-node --transpile-only apps/web/src/worker.ts &
+npx tsx /app/apps/web/src/worker.ts &
 WORKER_PID=$!
 
 # 启动 Web 服务（前台）
 echo "🌐 Starting Web server..."
-cd /app && node apps/web/server.js &
+node /app/apps/web/server.js &
 WEB_PID=$!
 
 # 等待任一进程退出
