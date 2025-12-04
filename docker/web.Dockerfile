@@ -24,7 +24,11 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 
 COPY . .
 
-RUN corepack enable pnpm && pnpm build:web
+# 生成 Prisma Client
+RUN corepack enable pnpm && pnpm --filter @platform/web db:generate
+
+# 构建应用
+RUN pnpm build
 
 # 生产阶段
 FROM base AS runner
