@@ -31,9 +31,6 @@ jobs:
           - name: worker
             dockerfile: docker/worker.Dockerfile
             context: .
-          - name: sandbox
-            dockerfile: docker/sandbox.Dockerfile
-            context: .
 
     steps:
       - name: Checkout repository

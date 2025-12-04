@@ -7,8 +7,9 @@
 ```
 ghcr.io/jamplesmise/prompt_tool/web:latest
 ghcr.io/jamplesmise/prompt_tool/worker:latest
-ghcr.io/jamplesmise/prompt_tool/sandbox:latest
 ```
+
+> **注意**: Sandbox 服务使用云端服务，不需要构建镜像
 
 ## 🚀 查看构建状态
 
@@ -50,7 +51,6 @@ GitHub Actions 会在以下情况自动构建镜像：
 ```bash
 docker pull ghcr.io/jamplesmise/prompt_tool/web:latest
 docker pull ghcr.io/jamplesmise/prompt_tool/worker:latest
-docker pull ghcr.io/jamplesmise/prompt_tool/sandbox:latest
 ```
 
 ### 私有镜像（需要认证）
@@ -85,9 +85,7 @@ services:
     image: ghcr.io/jamplesmise/prompt_tool/worker:latest
     # ... 其他配置
 
-  sandbox:
-    image: ghcr.io/jamplesmise/prompt_tool/sandbox:latest
-    # ... 其他配置
+  # sandbox 使用云端服务，无需本地部署
 ```
 
 启动：
@@ -113,10 +111,7 @@ docker run -d \
   -e REDIS_URL="your_redis_url" \
   ghcr.io/jamplesmise/prompt_tool/worker:latest
 
-# Sandbox 服务
-docker run -d \
-  -p 3001:3001 \
-  ghcr.io/jamplesmise/prompt_tool/sandbox:latest
+# Sandbox 使用云端服务，无需部署
 ```
 
 ## 🔄 更新镜像
@@ -161,8 +156,7 @@ docker build -f docker/web.Dockerfile -t my-prompt-tool-web .
 # 构建 worker 镜像
 docker build -f docker/worker.Dockerfile -t my-prompt-tool-worker .
 
-# 构建 sandbox 镜像
-docker build -f docker/sandbox.Dockerfile -t my-prompt-tool-sandbox .
+# sandbox 使用云端服务，无需构建
 ```
 
 ## 📝 注意事项
