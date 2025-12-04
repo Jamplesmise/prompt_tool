@@ -14,7 +14,6 @@ import {
   ClockCircleOutlined,
   MonitorOutlined,
   AlertOutlined,
-  BellOutlined,
 } from '@ant-design/icons'
 import type { ProLayoutProps } from '@ant-design/pro-components'
 import { ProLayout } from '@ant-design/pro-components'
@@ -24,8 +23,10 @@ import { Dropdown, Spin, Divider } from 'antd'
 import type { MenuProps } from 'antd'
 import { useRequireAuth, useAuth } from '@/hooks/useAuth'
 import { useUserStore } from '@/stores/userStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import { Breadcrumb } from '@/components/common'
 import { TeamSelector } from '@/components/team/TeamSelector'
+import { GlobalHotkeys } from '@/components/global'
 
 const menuData = [
   {
@@ -69,7 +70,7 @@ const menuData = [
     icon: <MonitorOutlined />,
     routes: [
       {
-        path: '/monitor',
+        path: '/monitor/overview',
         name: '概览',
         icon: <DashboardOutlined />,
       },
@@ -81,21 +82,9 @@ const menuData = [
     ],
   },
   {
-    path: '/settings',
+    path: '/settings/general',
     name: '设置',
     icon: <SettingOutlined />,
-    routes: [
-      {
-        path: '/settings',
-        name: '通用设置',
-        icon: <SettingOutlined />,
-      },
-      {
-        path: '/settings/notifications',
-        name: '通知渠道',
-        icon: <BellOutlined />,
-      },
-    ],
   },
 ]
 
@@ -105,6 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { isLoading, isAuthenticated } = useRequireAuth()
   const { logout } = useAuth()
   const user = useUserStore((state) => state.user)
+  const fontSize = useSettingsStore((state) => state.fontSize)
 
   // 未登录或加载中显示加载状态
   if (isLoading || !isAuthenticated) {
@@ -169,7 +159,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ProLayout {...layoutSettings}>
-      <div className="p-6">
+      <GlobalHotkeys />
+      <div className="p-6" style={{ fontSize: `${fontSize}px` }}>
         <Breadcrumb />
         {children}
       </div>

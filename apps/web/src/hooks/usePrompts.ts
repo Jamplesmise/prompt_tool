@@ -22,7 +22,7 @@ const promptBranchesKey = (id: string) => ['prompts', id, 'branches']
 const promptBranchDetailKey = (promptId: string, branchId: string) => ['prompts', promptId, 'branches', branchId]
 
 // 提示词列表
-export function usePrompts(params?: { page?: number; pageSize?: number; keyword?: string }) {
+export function usePrompts(params?: { page?: number; pageSize?: number; keyword?: string; tags?: string[] }) {
   return useQuery({
     queryKey: [...PROMPTS_KEY, params],
     queryFn: async () => {
@@ -31,6 +31,43 @@ export function usePrompts(params?: { page?: number; pageSize?: number; keyword?
         throw new Error(response.message)
       }
       return response.data
+    },
+  })
+}
+
+// 批量删除提示词
+export function useBatchDeletePrompts() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const response = await promptsService.batchDelete(ids)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: PROMPTS_KEY })
+      appMessage.success(`成功删除 ${data.deleted} 个提示词`)
+    },
+    onError: (error: Error) => {
+      appMessage.error(error.message || '批量删除失败')
+    },
+  })
+}
+
+// 批量导出提示词
+export function useBatchExportPrompts() {
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      await promptsService.batchExport(ids)
+    },
+    onSuccess: () => {
+      appMessage.success('导出成功')
+    },
+    onError: (error: Error) => {
+      appMessage.error(error.message || '导出失败')
     },
   })
 }

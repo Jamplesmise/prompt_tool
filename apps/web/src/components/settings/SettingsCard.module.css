@@ -1,0 +1,47 @@
+.card {
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px 16px;
+}
+
+.titleWrapper {
+  flex: 1;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0;
+  line-height: 24px;
+}
+
+.description {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin: 4px 0 0;
+  line-height: 22px;
+}
+
+.extra {
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 0 24px;
+}
+
+.content {
+  padding: 20px 24px 24px;
+}

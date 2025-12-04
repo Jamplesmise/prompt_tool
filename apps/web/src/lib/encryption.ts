@@ -57,12 +57,22 @@ export function decryptApiKey(encryptedData: string): string {
   return decrypted
 }
 
-// 脱敏显示 API Key（仅显示后4位）
-export function maskApiKey(apiKey: string): string {
-  if (!apiKey || apiKey.length < 4) {
+// 脱敏显示 API Key（显示 sk-****xxxx 格式，共10字符）
+export function maskApiKey(encryptedApiKey: string): string {
+  try {
+    // 先解密获取原始 key
+    const originalKey = decryptApiKey(encryptedApiKey)
+    if (!originalKey || originalKey.length < 4) {
+      return '****'
+    }
+    // 显示格式：前缀 + **** + 后4位，如 sk-****a1b2
+    const suffix = originalKey.slice(-4)
+    const prefix = originalKey.slice(0, 3) // 取前3位如 sk-
+    return `${prefix}****${suffix}`
+  } catch {
+    // 解密失败，返回通用脱敏
     return '****'
   }
-  return `${'*'.repeat(apiKey.length - 4)}${apiKey.slice(-4)}`
 }
 
 // 检查是否已加密（通过格式判断）

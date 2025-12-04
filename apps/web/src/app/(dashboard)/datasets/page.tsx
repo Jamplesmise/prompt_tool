@@ -2,21 +2,26 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Input, Table, Space, Popconfirm, Tag, Typography, Dropdown } from 'antd'
+import { Button, Input, Table, Space, Tag, Typography, Dropdown, Row, Col } from 'antd'
 import {
-  PlusOutlined,
   SearchOutlined,
   DeleteOutlined,
   DownloadOutlined,
   UploadOutlined,
   EyeOutlined,
+  MoreOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { MenuProps } from 'antd'
 import dayjs from 'dayjs'
-import { useDatasets, useDeleteDataset, useCreateDataset, useUploadDataset } from '@/hooks/useDatasets'
+import { useDatasets, useDeleteDataset, useCreateDataset } from '@/hooks/useDatasets'
 import { datasetsService } from '@/services/datasets'
-import { UploadModal } from '@/components/dataset'
+import {
+  DatasetUploadModal,
+  DatasetCard,
+  ViewToggle,
+} from '@/components/dataset'
+import type { ViewMode } from '@/components/dataset'
 import { LoadingState, ErrorState, EmptyState } from '@/components/common'
 import type { DatasetListItem } from '@/services/datasets'
 
@@ -29,11 +34,11 @@ export default function DatasetsPage() {
   const [keyword, setKeyword] = useState('')
   const [searchValue, setSearchValue] = useState('')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const { data, isLoading, error, refetch } = useDatasets({ page, pageSize, keyword })
   const deleteDataset = useDeleteDataset()
   const createDataset = useCreateDataset()
-  const uploadDataset = useUploadDataset()
 
   // 加载状态
   if (isLoading && !data) {
@@ -57,7 +62,8 @@ export default function DatasetsPage() {
   const handleUpload = async (
     file: File,
     isPersistent: boolean,
-    fieldMapping: Record<string, string>
+    fieldMapping: Record<string, string>,
+    onProgress?: (percent: number) => void
   ) => {
     // 先创建数据集
     const dataset = await createDataset.mutateAsync({
@@ -65,13 +71,19 @@ export default function DatasetsPage() {
       isPersistent,
     })
 
-    // 然后上传文件
-    await uploadDataset.mutateAsync({
-      id: dataset.id,
-      data: { file, isPersistent, fieldMapping },
-    })
+    // 然后上传文件（带进度回调）
+    const response = await datasetsService.uploadWithProgress(
+      dataset.id,
+      { file, isPersistent, fieldMapping },
+      onProgress
+    )
+
+    if (response.code !== 200) {
+      throw new Error(response.message)
+    }
 
     setUploadModalOpen(false)
+    refetch()
   }
 
   const templateMenuItems: MenuProps['items'] = [
@@ -117,7 +129,7 @@ export default function DatasetsPage() {
       key: 'isPersistent',
       width: 100,
       render: (isPersistent) => (
-        <Tag color={isPersistent ? 'blue' : 'default'}>
+        <Tag color={isPersistent ? 'green' : 'orange'}>
           {isPersistent ? '持久化' : '临时'}
         </Tag>
       ),
@@ -132,40 +144,106 @@ export default function DatasetsPage() {
     {
       title: '操作',
       key: 'action',
-      width: 180,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => router.push(`/datasets/${record.id}`)}
-          >
-            查看
-          </Button>
-          <Button
-            type="text"
-            size="small"
-            icon={<DownloadOutlined />}
-            onClick={() => datasetsService.download(record.id)}
-          >
-            导出
-          </Button>
-          <Popconfirm
-            title="确认删除"
-            description="删除后无法恢复，确定要删除吗？"
-            onConfirm={() => handleDelete(record.id)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />}>
-              删除
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      width: 80,
+      align: 'center',
+      render: (_, record) => {
+        const actionItems: MenuProps['items'] = [
+          {
+            key: 'view',
+            icon: <EyeOutlined />,
+            label: '查看',
+            onClick: () => router.push(`/datasets/${record.id}`),
+          },
+          {
+            key: 'export',
+            icon: <DownloadOutlined />,
+            label: '导出',
+            onClick: () => datasetsService.download(record.id),
+          },
+          { type: 'divider' },
+          {
+            key: 'delete',
+            icon: <DeleteOutlined />,
+            label: '删除',
+            danger: true,
+            onClick: () => {
+              // 使用 Modal.confirm 替代 Popconfirm
+              import('antd').then(({ Modal }) => {
+                Modal.confirm({
+                  title: '确认删除',
+                  content: '删除后无法恢复，确定要删除吗？',
+                  okText: '确定',
+                  cancelText: '取消',
+                  okButtonProps: { danger: true },
+                  onOk: () => handleDelete(record.id),
+                })
+              })
+            },
+          },
+        ]
+
+        return (
+          <Dropdown menu={{ items: actionItems }} trigger={['click']}>
+            <Button type="text" icon={<MoreOutlined />} />
+          </Dropdown>
+        )
+      },
     },
   ]
+
+  const renderListView = () => (
+    <Table
+      rowKey="id"
+      columns={columns}
+      dataSource={data?.list || []}
+      loading={isLoading}
+      pagination={{
+        current: page,
+        pageSize,
+        total: data?.total || 0,
+        showSizeChanger: true,
+        showTotal: (total) => `共 ${total} 条`,
+        onChange: (p, ps) => {
+          setPage(p)
+          setPageSize(ps)
+        },
+      }}
+      locale={{
+        emptyText: keyword ? '未找到匹配的数据集' : '暂无数据',
+      }}
+    />
+  )
+
+  const renderCardView = () => (
+    <div>
+      <Row gutter={[16, 16]}>
+        {(data?.list || []).map((dataset) => (
+          <Col key={dataset.id} xs={24} sm={12} md={8} lg={6}>
+            <DatasetCard
+              id={dataset.id}
+              name={dataset.name}
+              rowCount={dataset.rowCount}
+              storageType={dataset.isPersistent ? 'persistent' : 'temporary'}
+              updatedAt={dataset.updatedAt}
+              onView={() => router.push(`/datasets/${dataset.id}`)}
+              onExport={() => datasetsService.download(dataset.id)}
+              onDelete={() => handleDelete(dataset.id)}
+            />
+          </Col>
+        ))}
+      </Row>
+      {data && data.total > pageSize && (
+        <div style={{ marginTop: 24, textAlign: 'center' }}>
+          <Button
+            onClick={() => setPage(page + 1)}
+            disabled={page * pageSize >= data.total}
+          >
+            加载更多
+          </Button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div>
@@ -174,6 +252,7 @@ export default function DatasetsPage() {
           数据集管理
         </Title>
         <Space>
+          <ViewToggle value={viewMode} onChange={setViewMode} />
           <Dropdown menu={{ items: templateMenuItems }}>
             <Button icon={<DownloadOutlined />}>下载模板</Button>
           </Dropdown>
@@ -208,34 +287,17 @@ export default function DatasetsPage() {
           actionText="上传数据集"
           onAction={() => setUploadModalOpen(true)}
         />
+      ) : viewMode === 'list' ? (
+        renderListView()
       ) : (
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={data?.list || []}
-          loading={isLoading}
-          pagination={{
-            current: page,
-            pageSize,
-            total: data?.total || 0,
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条`,
-            onChange: (p, ps) => {
-              setPage(p)
-              setPageSize(ps)
-            },
-          }}
-          locale={{
-            emptyText: keyword ? '未找到匹配的数据集' : '暂无数据',
-          }}
-        />
+        renderCardView()
       )}
 
-      <UploadModal
+      <DatasetUploadModal
         open={uploadModalOpen}
         onOk={handleUpload}
         onCancel={() => setUploadModalOpen(false)}
-        loading={createDataset.isPending || uploadDataset.isPending}
+        loading={createDataset.isPending}
       />
     </div>
   )
