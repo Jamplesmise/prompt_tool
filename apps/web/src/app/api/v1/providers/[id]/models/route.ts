@@ -8,6 +8,54 @@ type RouteParams = {
   params: Promise<{ id: string }>
 }
 
+// GET /api/v1/providers/:providerId/models - 获取提供商的模型列表
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json(unauthorized(), { status: 401 })
+    }
+
+    const { id: providerId } = await params
+
+    // 检查提供商是否存在
+    const provider = await prisma.provider.findUnique({ where: { id: providerId } })
+    if (!provider) {
+      return NextResponse.json(notFound('提供商不存在'), { status: 404 })
+    }
+
+    // 获取该提供商的所有模型
+    const models = await prisma.model.findMany({
+      where: { providerId },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const list = models.map((model) => ({
+      id: model.id,
+      name: model.name,
+      modelId: model.modelId,
+      config: model.config,
+      pricing: model.pricing,
+      isActive: model.isActive,
+      createdAt: model.createdAt.toISOString(),
+      updatedAt: model.updatedAt.toISOString(),
+    }))
+
+    return NextResponse.json(
+      success({
+        list,
+        total: list.length,
+      })
+    )
+  } catch (err) {
+    console.error('Get provider models error:', err)
+    return NextResponse.json(
+      error(ERROR_CODES.INTERNAL_ERROR, '获取模型列表失败'),
+      { status: 500 }
+    )
+  }
+}
+
 // POST /api/v1/providers/:providerId/models - 为提供商添加模型
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {

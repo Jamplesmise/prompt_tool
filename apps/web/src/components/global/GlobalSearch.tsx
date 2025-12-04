@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Modal, Input, Spin, Empty, Typography, Tag } from 'antd'
+import type { InputRef } from 'antd'
 import {
   SearchOutlined,
   FileTextOutlined,
@@ -54,7 +55,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<InputRef>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout>()
 
@@ -351,7 +352,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         <div className={styles.inputWrapper}>
           <SearchOutlined className={styles.searchIcon} />
           <Input
-            ref={inputRef as unknown as React.Ref<HTMLInputElement>}
+            ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
