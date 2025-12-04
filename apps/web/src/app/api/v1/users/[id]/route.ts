@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { success, error, unauthorized, forbidden, notFound, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
+import type { UserRole } from '@prisma/client'
 
 type RouteParams = {
   params: Promise<{ id: string }>
@@ -99,9 +100,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(badRequest('不能修改自己的角色'), { status: 400 })
     }
 
-    const updateData: { name?: string; role?: string } = {}
+    const updateData: { name?: string; role?: UserRole } = {}
     if (name) updateData.name = name.trim()
-    if (role) updateData.role = role.toUpperCase()
+    if (role) updateData.role = role.toUpperCase() as UserRole
 
     const user = await prisma.user.update({
       where: { id },

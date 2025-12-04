@@ -2,13 +2,18 @@ import type { ApiResponse, User } from '@platform/shared'
 
 const API_BASE = '/api/v1'
 
+// 用户列表项（包含团队数量）
+export type UserListItem = User & {
+  teamCount: number
+}
+
 // 获取用户列表（管理员）
 export async function listUsers(params?: {
   page?: number
   pageSize?: number
   search?: string
   role?: string
-}): Promise<ApiResponse<{ list: User[]; total: number }>> {
+}): Promise<ApiResponse<{ list: UserListItem[]; total: number }>> {
   const searchParams = new URLSearchParams()
   if (params?.page) searchParams.set('page', String(params.page))
   if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize))

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { success, error, unauthorized, forbidden } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
+import type { UserRole } from '@prisma/client'
 
 // 获取用户列表（管理员）
 export async function GET(request: NextRequest) {
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     // 构建查询条件
     const where: {
       OR?: { email?: { contains: string }; name?: { contains: string } }[]
-      role?: string
+      role?: UserRole
     } = {}
 
     if (search) {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (role) {
-      where.role = role.toUpperCase()
+      where.role = role.toUpperCase() as UserRole
     }
 
     // 查询用户列表

@@ -61,7 +61,8 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuditLogs } from '@/hooks/useAuditLogs'
 import { useRouter } from 'next/navigation'
-import type { UploadProps, ColumnsType } from 'antd/es/table'
+import type { ColumnsType } from 'antd/es/table'
+import type { UploadProps } from 'antd/es/upload'
 import type { ApiTokenScope, TeamRole, TeamMemberWithUser, NotifyChannelType } from '@platform/shared'
 import type { AuditLogListItem } from '@/services/auditLogs'
 import type { AuditAction, AuditResource } from '@platform/shared'
@@ -102,15 +103,7 @@ type NotifyChannelItem = {
   createdAt: string
 }
 
-type UserWithCount = {
-  id: string
-  email: string
-  name: string
-  avatar: string | null
-  role: string
-  createdAt: string | Date
-  teamCount: number
-}
+import type { UserListItem } from '@/services/users'
 
 type GeneralSettings = {
   siteName: string
@@ -499,7 +492,7 @@ export default function SettingsPage() {
     { title: '操作', key: 'action', width: 60, render: (_, r) => canManageMembers && r.role !== 'OWNER' ? <Popconfirm title="确定移除？" onConfirm={() => removeMember.mutate({ teamId: currentTeam!.id, userId: r.userId })}><Button type="link" danger size="small">移除</Button></Popconfirm> : null },
   ]
 
-  const userColumns: ColumnsType<UserWithCount> = [
+  const userColumns: ColumnsType<UserListItem> = [
     { title: '用户', key: 'user', render: (_, r) => <Space><Avatar src={r.avatar} icon={<UserOutlined />} size="small" /><span>{r.name}</span></Space> },
     { title: '角色', dataIndex: 'role', key: 'role', width: 120, render: (role: string, r) => r.id !== user?.id ? <Select value={role} options={userRoleOptions} style={{ width: 90 }} size="small" onChange={(v) => updateUserMutation.mutate({ id: r.id, role: v })} /> : <Tag color={userRoleColors[role]}>{userRoleLabels[role]}</Tag> },
     { title: '团队', dataIndex: 'teamCount', key: 'teamCount', width: 60 },
