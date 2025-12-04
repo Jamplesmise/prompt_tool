@@ -82,7 +82,7 @@ const menuData = [
     ],
   },
   {
-    path: '/settings/general',
+    path: '/settings',
     name: '设置',
     icon: <SettingOutlined />,
   },
@@ -160,7 +160,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProLayout {...layoutSettings}>
       <GlobalHotkeys />
-      <div className="p-6" style={{ fontSize: `${fontSize}px` }}>
+      <div className="px-6 py-4" style={{ fontSize: `${fontSize}px` }}>
         <Breadcrumb />
         {children}
       </div>

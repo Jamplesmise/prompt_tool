@@ -7,14 +7,63 @@
   --background-rgb: 255, 255, 255;
 }
 
+html {
+  font-size: 15px;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
+  font-size: 15px;
+}
+
+/* Ant Design 全局字体大小覆盖 */
+.ant-pro-layout,
+.ant-pro-layout *,
+.ant-table,
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-tag,
+.ant-typography,
+.ant-menu,
+.ant-dropdown,
+.ant-modal,
+.ant-form {
+  font-size: inherit;
 }
 
 /* Ant Design ProLayout 样式修复 */
 .ant-pro-layout {
   min-height: 100vh;
+}
+
+/* 侧边菜单字体 */
+.ant-pro-sider-menu-item,
+.ant-menu-item,
+.ant-menu-submenu-title {
+  font-size: 14px !important;
+}
+
+/* 表格字体 */
+.ant-table {
+  font-size: 14px;
+}
+
+.ant-table-thead > tr > th {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 按钮字体 */
+.ant-btn {
+  font-size: 14px;
+}
+
+/* 输入框字体 */
+.ant-input,
+.ant-select-selection-item {
+  font-size: 14px;
 }
 
 /* 滚动条样式 */
