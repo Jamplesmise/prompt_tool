@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const data = evaluators.map((e) => ({
+    const list = evaluators.map((e) => ({
       id: e.id,
       name: e.name,
       description: e.description,
@@ -46,7 +46,10 @@ export async function GET(request: NextRequest) {
       updatedAt: e.updatedAt.toISOString(),
     }))
 
-    return NextResponse.json(success(data))
+    return NextResponse.json(success({
+      list,
+      total: list.length,
+    }))
   } catch (err) {
     console.error('Get evaluators error:', err)
     return NextResponse.json(

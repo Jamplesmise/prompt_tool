@@ -4,6 +4,92 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
+// POST /api/v1/prompts/batch - 批量创建提示词
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getSession()
+    if (!session) {
+      return NextResponse.json(unauthorized(), { status: 401 })
+    }
+
+    const body = await request.json()
+    const { prompts } = body as {
+      prompts: Array<{
+        name: string
+        content: string
+        description?: string
+        variables?: string[]
+        tags?: string[]
+      }>
+    }
+
+    if (!prompts || !Array.isArray(prompts) || prompts.length === 0) {
+      return NextResponse.json(
+        badRequest('请提供要创建的提示词列表'),
+        { status: 400 }
+      )
+    }
+
+    // 验证必填字段
+    for (const prompt of prompts) {
+      if (!prompt.name || !prompt.content) {
+        return NextResponse.json(
+          badRequest('提示词名称和内容不能为空'),
+          { status: 400 }
+        )
+      }
+    }
+
+    // 获取用户的团队
+    const userWithTeam = await prisma.user.findUnique({
+      where: { id: session.id },
+      include: {
+        teamMembers: {
+          take: 1,
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    })
+
+    const teamId = userWithTeam?.teamMembers[0]?.teamId || null
+
+    // 使用事务批量创建
+    const result = await prisma.$transaction(
+      prompts.map((prompt) =>
+        prisma.prompt.create({
+          data: {
+            name: prompt.name,
+            content: prompt.content,
+            description: prompt.description || null,
+            variables: prompt.variables || [],
+            tags: prompt.tags || [],
+            createdById: session.id,
+            teamId,
+          },
+        })
+      )
+    )
+
+    return NextResponse.json(
+      success({
+        created: result.length,
+        prompts: result.map((p) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          createdAt: p.createdAt.toISOString(),
+        })),
+      })
+    )
+  } catch (err) {
+    console.error('Batch create prompts error:', err)
+    return NextResponse.json(
+      error(ERROR_CODES.INTERNAL_ERROR, '批量创建失败'),
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE /api/v1/prompts/batch - 批量删除提示词
 export async function DELETE(request: NextRequest) {
   try {
