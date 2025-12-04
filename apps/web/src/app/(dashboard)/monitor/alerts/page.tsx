@@ -30,7 +30,9 @@ import {
   useToggleAlertRule,
   useAcknowledgeAlert,
   useResolveAlert,
+  useCreateAlertRule,
 } from '@/hooks/useAlerts'
+import { AlertRuleModal } from '@/components/monitor'
 import type { AlertRuleListItem, AlertListItem } from '@/services/alerts'
 import type { AlertSeverity, AlertStatus } from '@platform/shared'
 import dayjs from 'dayjs'
@@ -218,10 +220,12 @@ function AlertsTable() {
 function AlertRulesTable() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const { data, isLoading, refetch } = useAlertRules({ page, pageSize })
   const deleteMutation = useDeleteAlertRule()
   const toggleMutation = useToggleAlertRule()
+  const createMutation = useCreateAlertRule()
 
   const columns: ColumnsType<AlertRuleListItem> = [
     {
@@ -307,10 +311,26 @@ function AlertRulesTable() {
     },
   ]
 
+  const handleCreateRule = async (values: {
+    name: string
+    description?: string
+    metric: string
+    condition: string
+    threshold: number
+    duration: number
+    severity: string
+    silencePeriod: number
+    isActive: boolean
+  }) => {
+    await createMutation.mutateAsync(values as Parameters<typeof createMutation.mutateAsync>[0])
+    setModalOpen(false)
+    refetch()
+  }
+
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <Button type="primary" icon={<PlusOutlined />}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
           创建规则
         </Button>
       </div>
@@ -330,6 +350,12 @@ function AlertRulesTable() {
             setPageSize(ps)
           },
         }}
+      />
+      <AlertRuleModal
+        open={modalOpen}
+        onCancel={() => setModalOpen(false)}
+        onSubmit={handleCreateRule}
+        loading={createMutation.isPending}
       />
     </Space>
   )

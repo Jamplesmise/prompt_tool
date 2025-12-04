@@ -85,7 +85,7 @@ export type TrendData = {
   summary: TrendSummary
 }
 
-export type TimeRange = '24h' | '7d' | '30d' | 'custom'
+export type TimeRange = '24h' | '7d' | '14d' | '30d' | '60d' | 'custom'
 
 export type GroupBy = 'hour' | 'day' | 'week'
 

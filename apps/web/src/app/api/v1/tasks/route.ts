@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     // 验证执行配置
     const execution = body.config.execution ?? {}
     const concurrency = Math.max(1, Math.min(20, execution.concurrency ?? 5))
-    const timeoutSeconds = Math.max(10, Math.min(300, execution.timeoutSeconds ?? 30))
+    const timeoutSeconds = Math.max(10, Math.min(300, execution.timeoutSeconds ?? 180))
     const retryCount = Math.max(0, Math.min(5, execution.retryCount ?? 3))
 
     // 验证关联资源存在

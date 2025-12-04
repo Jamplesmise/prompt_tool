@@ -52,6 +52,11 @@ type TestResult = {
   success: boolean
   message: string
   latencyMs: number
+  tokenUsage?: {
+    input: number
+    output: number
+  }
+  response?: string
 }
 
 // 创建提供商参数
@@ -144,6 +149,14 @@ export const modelsService = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+      })
+      return response.json()
+    },
+
+    // 测试提供商连接
+    async test(id: string): Promise<ApiResponse<TestResult>> {
+      const response = await fetch(`${API_BASE}/providers/${id}/test`, {
+        method: 'POST',
       })
       return response.json()
     },

@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const modelIds = searchParams.get('modelIds')?.split(',').filter(Boolean)
 
     // 验证时间范围
-    if (!['24h', '7d', '30d', 'custom'].includes(range)) {
+    if (!['24h', '7d', '14d', '30d', '60d', 'custom'].includes(range)) {
       return NextResponse.json(badRequest('无效的时间范围'), { status: 400 })
     }
 

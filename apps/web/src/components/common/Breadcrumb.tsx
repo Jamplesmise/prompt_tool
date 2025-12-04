@@ -32,8 +32,8 @@ export function Breadcrumb() {
   // 解析路径
   const pathSegments = pathname.split('/').filter(Boolean)
 
-  // 如果是首页，不显示面包屑
-  if (pathSegments.length === 0) {
+  // 如果是首页或设置页，不显示面包屑
+  if (pathSegments.length === 0 || pathSegments[0] === 'settings') {
     return null
   }
 

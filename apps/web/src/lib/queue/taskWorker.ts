@@ -59,7 +59,7 @@ type ExecutionPlanItem = {
 // 任务执行配置
 type TaskExecutionConfig = {
   concurrency: number
-  timeoutSeconds: number
+  timeout: number // 超时时间（秒）
   retryCount: number
 }
 
@@ -369,7 +369,7 @@ async function executeSingleTest(
 
     // 2. 调用模型（带重试和超时）
     const model = task.models.find((m) => m.id === item.modelId)!
-    const timeoutMs = task.config.timeoutSeconds * 1000
+    const timeoutMs = (task.config.timeout ?? 180) * 1000
 
     const result = await executeWithRetry(
       () =>

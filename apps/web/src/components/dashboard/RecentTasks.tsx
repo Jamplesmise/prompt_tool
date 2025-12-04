@@ -109,12 +109,22 @@ export function RecentTasks() {
       ) : tasks.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description="暂无任务"
+          description={
+            <span className="text-gray-500">
+              暂无测试任务
+              <br />
+              <span className="text-sm">创建你的第一个测试任务吧</span>
+            </span>
+          }
         >
           <Button
             type="primary"
             icon={<PlayCircleOutlined />}
             onClick={() => router.push('/tasks/new')}
+            style={{
+              background: 'linear-gradient(135deg, #1677FF, #69B1FF)',
+              border: 'none',
+            }}
           >
             创建任务
           </Button>

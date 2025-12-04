@@ -60,7 +60,7 @@ export const PAGINATION_DEFAULTS = {
 // 任务默认配置
 export const TASK_DEFAULTS = {
   CONCURRENCY: 5,
-  TIMEOUT: 30000,
+  TIMEOUT: 180000, // 180 秒
   RETRY_COUNT: 3,
   RETRY_DELAY: 1000,
 } as const
