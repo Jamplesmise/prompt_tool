@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
-// GET /api/v1/projects - 获取用户所属项目列表
+// GET /api/v1/teams - 获取用户所属团队列表
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession()
@@ -16,12 +16,12 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10)
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
 
-    // 查询用户所属的项目
+    // 查询用户所属的团队
     const [memberships, total] = await Promise.all([
-      prisma.projectMember.findMany({
+      prisma.teamMember.findMany({
         where: { userId: session.id },
         include: {
-          project: {
+          team: {
             include: {
               owner: {
                 select: {
@@ -41,33 +41,33 @@ export async function GET(request: NextRequest) {
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prisma.projectMember.count({ where: { userId: session.id } }),
+      prisma.teamMember.count({ where: { userId: session.id } }),
     ])
 
-    const projects = memberships.map((m) => ({
-      ...m.project,
+    const teams = memberships.map((m) => ({
+      ...m.team,
       role: m.role,
-      memberCount: m.project._count.members,
+      memberCount: m.team._count.members,
     }))
 
     return NextResponse.json(
       success({
-        list: projects,
+        list: teams,
         total,
         page,
         pageSize,
       })
     )
   } catch (err) {
-    console.error('Get projects error:', err)
+    console.error('Get teams error:', err)
     return NextResponse.json(
-      error(ERROR_CODES.INTERNAL_ERROR, '获取项目列表失败'),
+      error(ERROR_CODES.INTERNAL_ERROR, '获取团队列表失败'),
       { status: 500 }
     )
   }
 }
 
-// POST /api/v1/projects - 创建项目
+// POST /api/v1/teams - 创建团队
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
@@ -79,12 +79,12 @@ export async function POST(request: NextRequest) {
     const { name, description, avatar } = body
 
     if (!name || name.trim() === '') {
-      return NextResponse.json(badRequest('项目名称不能为空'), { status: 400 })
+      return NextResponse.json(badRequest('团队名称不能为空'), { status: 400 })
     }
 
-    // 使用事务创建项目和所有者成员关系
-    const project = await prisma.$transaction(async (tx) => {
-      const newProject = await tx.project.create({
+    // 使用事务创建团队和所有者成员关系
+    const team = await prisma.$transaction(async (tx) => {
+      const newTeam = await tx.team.create({
         data: {
           name: name.trim(),
           description: description || null,
@@ -94,22 +94,22 @@ export async function POST(request: NextRequest) {
       })
 
       // 创建所有者成员关系
-      await tx.projectMember.create({
+      await tx.teamMember.create({
         data: {
-          projectId: newProject.id,
+          teamId: newTeam.id,
           userId: session.id,
           role: 'OWNER',
         },
       })
 
-      return newProject
+      return newTeam
     })
 
-    return NextResponse.json(success(project), { status: 201 })
+    return NextResponse.json(success(team), { status: 201 })
   } catch (err) {
-    console.error('Create project error:', err)
+    console.error('Create team error:', err)
     return NextResponse.json(
-      error(ERROR_CODES.INTERNAL_ERROR, '创建项目失败'),
+      error(ERROR_CODES.INTERNAL_ERROR, '创建团队失败'),
       { status: 500 }
     )
   }

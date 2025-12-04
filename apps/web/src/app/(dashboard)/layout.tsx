@@ -25,7 +25,7 @@ import type { MenuProps } from 'antd'
 import { useRequireAuth, useAuth } from '@/hooks/useAuth'
 import { useUserStore } from '@/stores/userStore'
 import { Breadcrumb } from '@/components/common'
-import { ProjectSelector } from '@/components/project/ProjectSelector'
+import { TeamSelector } from '@/components/team/TeamSelector'
 
 const menuData = [
   {
@@ -152,7 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ),
     onMenuHeaderClick: () => router.push('/'),
     actionsRender: () => [
-      <ProjectSelector key="project-selector" />,
+      <TeamSelector key="team-selector" />,
       <Divider key="divider" type="vertical" />,
     ],
     avatarProps: {

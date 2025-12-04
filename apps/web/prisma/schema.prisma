@@ -34,10 +34,10 @@ model User {
   acknowledgedAlerts Alert[] @relation("AlertAcknowledgedBy")
   notifyChannels   NotifyChannel[]
 
-  // Phase 9: 项目管理
-  ownedProjects    Project[] @relation("ProjectOwner")
-  projectMembers   ProjectMember[]
-  invitedMembers   ProjectMember[] @relation("InvitedBy")
+  // Phase 9: 团队管理
+  ownedTeams       Team[] @relation("TeamOwner")
+  teamMembers      TeamMember[]
+  invitedMembers   TeamMember[] @relation("InvitedBy")
   apiTokens        ApiToken[]
   auditLogs        AuditLog[]
 
@@ -65,8 +65,8 @@ model Prompt {
   createdById    String   @map("created_by_id")
   createdBy      User     @relation(fields: [createdById], references: [id])
 
-  projectId      String?  @map("project_id")
-  project        Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId         String?  @map("team_id")
+  team           Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
@@ -75,7 +75,7 @@ model Prompt {
   tasks          TaskPrompt[]
 
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@index([name])
   @@map("prompts")
 }
@@ -118,8 +118,8 @@ model Dataset {
   createdById  String   @map("created_by_id")
   createdBy    User     @relation(fields: [createdById], references: [id])
 
-  projectId    String?  @map("project_id")
-  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId       String?  @map("team_id")
+  team         Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -128,7 +128,7 @@ model Dataset {
   tasks        Task[]
 
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@map("datasets")
 }
 
@@ -163,15 +163,15 @@ model Provider {
   headers  Json         @default("{}")
   isActive Boolean      @default(true) @map("is_active")
 
-  projectId String?     @map("project_id")
-  project   Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId    String?     @map("team_id")
+  team      Team?       @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt DateTime    @default(now()) @map("created_at")
   updatedAt DateTime    @updatedAt @map("updated_at")
 
   models   Model[]
 
-  @@index([projectId])
+  @@index([teamId])
   @@map("providers")
 }
 
@@ -218,8 +218,8 @@ model Evaluator {
   createdById String?       @map("created_by_id")
   createdBy   User?         @relation(fields: [createdById], references: [id])
 
-  projectId   String?       @map("project_id")
-  project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId      String?       @map("team_id")
+  team        Team?         @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
@@ -228,7 +228,7 @@ model Evaluator {
   tasks             TaskEvaluator[]
 
   @@index([type])
-  @@index([projectId])
+  @@index([teamId])
   @@map("evaluators")
 }
 
@@ -263,8 +263,8 @@ model Task {
   createdById String     @map("created_by_id")
   createdBy   User       @relation(fields: [createdById], references: [id])
 
-  projectId   String?    @map("project_id")
-  project     Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId      String?    @map("team_id")
+  team        Team?      @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
@@ -281,7 +281,7 @@ model Task {
 
   @@index([status])
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@index([createdAt])
   @@map("tasks")
 }
@@ -465,8 +465,8 @@ model ScheduledTask {
   createdById     String   @map("created_by_id")
   createdBy       User     @relation(fields: [createdById], references: [id])
 
-  projectId       String?  @map("project_id")
-  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId          String?  @map("team_id")
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -476,7 +476,7 @@ model ScheduledTask {
   @@index([isActive])
   @@index([nextRunAt])
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@map("scheduled_tasks")
 }
 
@@ -529,8 +529,8 @@ model AlertRule {
   createdById     String   @map("created_by_id")
   createdBy       User     @relation(fields: [createdById], references: [id])
 
-  projectId       String?  @map("project_id")
-  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId          String?  @map("team_id")
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -539,7 +539,7 @@ model AlertRule {
 
   @@index([isActive])
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@map("alert_rules")
 }
 
@@ -607,8 +607,8 @@ model NotifyChannel {
   createdById     String   @map("created_by_id")
   createdBy       User     @relation(fields: [createdById], references: [id])
 
-  projectId       String?  @map("project_id")
-  project         Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId          String?  @map("team_id")
+  team            Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -616,7 +616,7 @@ model NotifyChannel {
   @@index([type])
   @@index([isActive])
   @@index([createdById])
-  @@index([projectId])
+  @@index([teamId])
   @@map("notify_channels")
 }
 
@@ -627,22 +627,22 @@ enum NotifyChannelType {
 }
 
 // ============================================
-// 项目管理模块
+// 团队管理模块
 // ============================================
 
-model Project {
+model Team {
   id          String   @id @default(uuid())
   name        String
   description String?
   avatar      String?
 
   ownerId     String   @map("owner_id")
-  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id])
+  owner       User     @relation("TeamOwner", fields: [ownerId], references: [id])
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  members     ProjectMember[]
+  members     TeamMember[]
   prompts     Prompt[]
   datasets    Dataset[]
   evaluators  Evaluator[]
@@ -656,17 +656,17 @@ model Project {
   notifyChannels NotifyChannel[]
 
   @@index([ownerId])
-  @@map("projects")
+  @@map("teams")
 }
 
-model ProjectMember {
+model TeamMember {
   id          String   @id @default(uuid())
-  projectId   String   @map("project_id")
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  teamId      String   @map("team_id")
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  role        ProjectRole @default(MEMBER)
+  role        TeamRole @default(MEMBER)
 
   invitedById String?  @map("invited_by_id")
   invitedBy   User?    @relation("InvitedBy", fields: [invitedById], references: [id])
@@ -674,12 +674,12 @@ model ProjectMember {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@unique([projectId, userId])
+  @@unique([teamId, userId])
   @@index([userId])
-  @@map("project_members")
+  @@map("team_members")
 }
 
-enum ProjectRole {
+enum TeamRole {
   OWNER
   ADMIN
   MEMBER
@@ -715,8 +715,8 @@ model AuditLog {
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
 
-  projectId   String?  @map("project_id")
-  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  teamId      String?  @map("team_id")
+  team        Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
   ipAddress   String?  @map("ip_address")
   userAgent   String?  @map("user_agent")
@@ -724,7 +724,7 @@ model AuditLog {
   createdAt   DateTime @default(now()) @map("created_at")
 
   @@index([userId])
-  @@index([projectId])
+  @@index([teamId])
   @@index([action])
   @@index([resource])
   @@index([createdAt])

@@ -1,11 +1,11 @@
-import type { ApiResponse, Project, ProjectRole, ProjectMemberWithUser } from '@platform/shared'
-import { getCurrentProjectId } from '@/stores/projectStore'
+import type { ApiResponse, Team, TeamRole, TeamMemberWithUser } from '@platform/shared'
+import { getCurrentTeamId } from '@/stores/teamStore'
 
 const API_BASE = '/api/v1'
 
-// 项目列表项
-type ProjectListItem = Project & {
-  role: ProjectRole
+// 团队列表项
+type TeamListItem = Team & {
+  role: TeamRole
   memberCount: number
   owner: {
     id: string
@@ -15,17 +15,17 @@ type ProjectListItem = Project & {
   }
 }
 
-// 项目列表响应
-type ProjectListResponse = {
-  list: ProjectListItem[]
+// 团队列表响应
+type TeamListResponse = {
+  list: TeamListItem[]
   total: number
   page: number
   pageSize: number
 }
 
-// 项目详情
-type ProjectDetail = Project & {
-  role: ProjectRole
+// 团队详情
+type TeamDetail = Team & {
+  role: TeamRole
   owner: {
     id: string
     name: string
@@ -42,61 +42,61 @@ type ProjectDetail = Project & {
 
 // 成员列表响应
 type MemberListResponse = {
-  list: ProjectMemberWithUser[]
+  list: TeamMemberWithUser[]
   total: number
   page: number
   pageSize: number
 }
 
-// 创建项目参数
-type CreateProjectInput = {
+// 创建团队参数
+type CreateTeamInput = {
   name: string
   description?: string
   avatar?: string
 }
 
-// 更新项目参数
-type UpdateProjectInput = Partial<CreateProjectInput>
+// 更新团队参数
+type UpdateTeamInput = Partial<CreateTeamInput>
 
 // 邀请成员参数
 type InviteMemberInput = {
   email: string
-  role: ProjectRole
+  role: TeamRole
 }
 
-// 获取带项目 ID 的请求头
-function getProjectHeaders(): Record<string, string> {
-  const projectId = getCurrentProjectId()
-  if (projectId) {
-    return { 'X-Project-Id': projectId }
+// 获取带团队 ID 的请求头
+function getTeamHeaders(): Record<string, string> {
+  const teamId = getCurrentTeamId()
+  if (teamId) {
+    return { 'X-Team-Id': teamId }
   }
   return {}
 }
 
-export const projectsService = {
-  // 获取项目列表
+export const teamsService = {
+  // 获取团队列表
   async list(params?: {
     page?: number
     pageSize?: number
-  }): Promise<ApiResponse<ProjectListResponse>> {
+  }): Promise<ApiResponse<TeamListResponse>> {
     const searchParams = new URLSearchParams()
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize))
 
-    const url = `${API_BASE}/projects${searchParams.toString() ? `?${searchParams}` : ''}`
+    const url = `${API_BASE}/teams${searchParams.toString() ? `?${searchParams}` : ''}`
     const response = await fetch(url)
     return response.json()
   },
 
-  // 获取项目详情
-  async get(id: string): Promise<ApiResponse<ProjectDetail>> {
-    const response = await fetch(`${API_BASE}/projects/${id}`)
+  // 获取团队详情
+  async get(id: string): Promise<ApiResponse<TeamDetail>> {
+    const response = await fetch(`${API_BASE}/teams/${id}`)
     return response.json()
   },
 
-  // 创建项目
-  async create(data: CreateProjectInput): Promise<ApiResponse<Project>> {
-    const response = await fetch(`${API_BASE}/projects`, {
+  // 创建团队
+  async create(data: CreateTeamInput): Promise<ApiResponse<Team>> {
+    const response = await fetch(`${API_BASE}/teams`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -104,9 +104,9 @@ export const projectsService = {
     return response.json()
   },
 
-  // 更新项目
-  async update(id: string, data: UpdateProjectInput): Promise<ApiResponse<Project>> {
-    const response = await fetch(`${API_BASE}/projects/${id}`, {
+  // 更新团队
+  async update(id: string, data: UpdateTeamInput): Promise<ApiResponse<Team>> {
+    const response = await fetch(`${API_BASE}/teams/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -114,17 +114,17 @@ export const projectsService = {
     return response.json()
   },
 
-  // 删除项目
+  // 删除团队
   async delete(id: string): Promise<ApiResponse<null>> {
-    const response = await fetch(`${API_BASE}/projects/${id}`, {
+    const response = await fetch(`${API_BASE}/teams/${id}`, {
       method: 'DELETE',
     })
     return response.json()
   },
 
-  // 转让项目所有权
+  // 转让团队所有权
   async transfer(id: string, newOwnerId: string): Promise<ApiResponse<null>> {
-    const response = await fetch(`${API_BASE}/projects/${id}/transfer`, {
+    const response = await fetch(`${API_BASE}/teams/${id}/transfer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ newOwnerId }),
@@ -136,24 +136,24 @@ export const projectsService = {
   members: {
     // 获取成员列表
     async list(
-      projectId: string,
+      teamId: string,
       params?: { page?: number; pageSize?: number }
     ): Promise<ApiResponse<MemberListResponse>> {
       const searchParams = new URLSearchParams()
       if (params?.page) searchParams.set('page', String(params.page))
       if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize))
 
-      const url = `${API_BASE}/projects/${projectId}/members${searchParams.toString() ? `?${searchParams}` : ''}`
+      const url = `${API_BASE}/teams/${teamId}/members${searchParams.toString() ? `?${searchParams}` : ''}`
       const response = await fetch(url)
       return response.json()
     },
 
     // 邀请成员
     async invite(
-      projectId: string,
+      teamId: string,
       data: InviteMemberInput
-    ): Promise<ApiResponse<ProjectMemberWithUser>> {
-      const response = await fetch(`${API_BASE}/projects/${projectId}/members`, {
+    ): Promise<ApiResponse<TeamMemberWithUser>> {
+      const response = await fetch(`${API_BASE}/teams/${teamId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -163,12 +163,12 @@ export const projectsService = {
 
     // 修改成员角色
     async updateRole(
-      projectId: string,
+      teamId: string,
       userId: string,
-      role: ProjectRole
-    ): Promise<ApiResponse<ProjectMemberWithUser>> {
+      role: TeamRole
+    ): Promise<ApiResponse<TeamMemberWithUser>> {
       const response = await fetch(
-        `${API_BASE}/projects/${projectId}/members/${userId}`,
+        `${API_BASE}/teams/${teamId}/members/${userId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -179,9 +179,9 @@ export const projectsService = {
     },
 
     // 移除成员
-    async remove(projectId: string, userId: string): Promise<ApiResponse<null>> {
+    async remove(teamId: string, userId: string): Promise<ApiResponse<null>> {
       const response = await fetch(
-        `${API_BASE}/projects/${projectId}/members/${userId}`,
+        `${API_BASE}/teams/${teamId}/members/${userId}`,
         { method: 'DELETE' }
       )
       return response.json()
@@ -189,14 +189,14 @@ export const projectsService = {
   },
 }
 
-export { getProjectHeaders }
+export { getTeamHeaders }
 
 export type {
-  ProjectListItem,
-  ProjectListResponse,
-  ProjectDetail,
+  TeamListItem,
+  TeamListResponse,
+  TeamDetail,
   MemberListResponse,
-  CreateProjectInput,
-  UpdateProjectInput,
+  CreateTeamInput,
+  UpdateTeamInput,
   InviteMemberInput,
 }
