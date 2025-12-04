@@ -24,9 +24,11 @@ export async function GET() {
     const now = new Date()
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
 
-    const [promptCount, datasetCount, tasks] = await Promise.all([
+    const [promptCount, datasetCount, taskCount, evaluatorCount, tasks] = await Promise.all([
       prisma.prompt.count({ where: { createdById: userId } }),
       prisma.dataset.count({ where: { createdById: userId } }),
+      prisma.task.count({ where: { createdById: userId } }),
+      prisma.evaluator.count({ where: { createdById: userId } }),
       prisma.task.findMany({
         where: {
           createdById: userId,
@@ -65,6 +67,8 @@ export async function GET() {
       success({
         promptCount,
         datasetCount,
+        taskCount,
+        evaluatorCount,
         taskCountThisWeek,
         avgPassRate,
         totalCostThisWeek,
