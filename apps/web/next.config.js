@@ -5,8 +5,8 @@ const nextConfig = {
   transpilePackages: ['@platform/shared', '@platform/evaluators', 'antd', '@ant-design/icons', '@ant-design/pro-components'],
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons', '@ant-design/pro-components'],
-    // Next.js 14 使用这个配置名
-    instrumentationHook: true,
+    // 构建时禁用 instrumentation（避免连接 Redis/PG）
+    instrumentationHook: process.env.NEXT_PHASE !== 'phase-production-build',
     serverComponentsExternalPackages: ['bullmq', 'ioredis'],
   },
 }
