@@ -21,7 +21,7 @@ import {
   useDeleteDataset,
 } from '@/hooks/useDatasets'
 import { datasetsService } from '@/services/datasets'
-import { DataTable, UploadModal } from '@/components/dataset'
+import { DataTable, UploadModal, VersionHistory } from '@/components/dataset'
 
 const { Title } = Typography
 
@@ -160,6 +160,14 @@ export default function DatasetDetailPage() {
           onAddRow={handleAddRow}
           onUpdateRow={handleUpdateRow}
           onDeleteRow={handleDeleteRow}
+        />
+      </Card>
+
+      {/* Phase 10: 版本历史 */}
+      <Card style={{ marginTop: 16 }}>
+        <VersionHistory
+          datasetId={id}
+          currentVersion={(dataset as { currentVersion?: number }).currentVersion}
         />
       </Card>
 
