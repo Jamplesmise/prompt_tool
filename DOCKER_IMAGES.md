@@ -2,58 +2,92 @@
 
 ## 📦 镜像地址
 
-所有镜像都推送到 GitHub Container Registry (ghcr.io)：
+单一镜像包含 Web + Worker 所有功能：
 
 ```
-ghcr.io/jamplesmise/prompt_tool/web:latest
-ghcr.io/jamplesmise/prompt_tool/worker:latest
+ghcr.io/jamplesmise/prompt_tool:latest
 ```
 
-> **注意**: Sandbox 服务使用云端服务，不需要构建镜像
+**镜像包含**：
+- ✅ Next.js Web 应用（前端 + API）
+- ✅ Worker 后台任务处理器
+- ✅ 所有功能完整可用
 
-## 🚀 查看构建状态
+---
 
-1. 访问 GitHub Actions 页面：
-   ```
-   https://github.com/Jamplesmise/prompt_tool/actions
-   ```
+## 🚀 快速开始
 
-2. 查看 "Build and Push Docker Images" 工作流
-
-3. 点击最新的构建查看详细日志
-
-## 📋 自动构建触发条件
-
-GitHub Actions 会在以下情况自动构建镜像：
-
-- ✅ 推送到 `main` 分支
-- ✅ 推送到 `v*.*.*` 分支（如 v1.2.3）
-- ✅ 创建 tag `v*`（如 v1.2.3）
-- ✅ 向 `main` 分支提交 PR
-
-## 🏷️ 镜像标签说明
-
-每次构建会生成多个标签：
-
-| 标签类型 | 示例 | 说明 |
-|---------|------|------|
-| `latest` | `latest` | 最新的 main 分支构建 |
-| 分支名 | `main`, `v1.2.3` | 对应分支的最新构建 |
-| 版本号 | `v1.2.3`, `1.2.3`, `1.2`, `1` | 语义化版本标签 |
-| SHA | `main-abc1234` | 特定 commit 的构建 |
-
-## 🔐 拉取镜像
-
-### 公开镜像（推荐）
-
-如果仓库设置为公开包，可以直接拉取：
+### 拉取镜像
 
 ```bash
-docker pull ghcr.io/jamplesmise/prompt_tool/web:latest
-docker pull ghcr.io/jamplesmise/prompt_tool/worker:latest
+docker pull ghcr.io/jamplesmise/prompt_tool:latest
 ```
 
-### 私有镜像（需要认证）
+### 运行容器
+
+```bash
+docker run -d \
+  --name prompt-tool \
+  -p 3000:3000 \
+  -e DATABASE_URL="postgresql://user:pass@host:5432/db" \
+  -e REDIS_URL="redis://host:6379" \
+  -e NEXTAUTH_SECRET="your-secret-key" \
+  -e NEXTAUTH_URL="http://localhost:3000" \
+  ghcr.io/jamplesmise/prompt_tool:latest
+```
+
+### 使用 docker-compose（推荐）
+
+创建 `docker-compose.yml`：
+
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: prompt
+      POSTGRES_PASSWORD: prompt123
+      POSTGRES_DB: prompt_tool
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  app:
+    image: ghcr.io/jamplesmise/prompt_tool:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://prompt:prompt123@postgres:5432/prompt_tool
+      REDIS_URL: redis://redis:6379
+      NEXTAUTH_SECRET: change-this-to-a-random-secret
+      NEXTAUTH_URL: http://localhost:3000
+      RUN_MIGRATIONS: "true"  # 首次启动时运行数据库迁移
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+```
+
+启动：
+
+```bash
+docker-compose up -d
+```
+
+---
+
+## 🔐 拉取镜像（私有仓库）
 
 如果镜像是私有的，需要先登录：
 
@@ -66,63 +100,85 @@ docker pull ghcr.io/jamplesmise/prompt_tool/worker:latest
 echo YOUR_PAT | docker login ghcr.io -u USERNAME --password-stdin
 
 # 拉取镜像
-docker pull ghcr.io/jamplesmise/prompt_tool/web:latest
+docker pull ghcr.io/jamplesmise/prompt_tool:latest
 ```
 
-## 🎯 使用镜像
+---
 
-### 方式 1：使用 docker-compose（推荐）
+## 🏷️ 镜像标签说明
 
-更新 `docker/docker-compose.yml`：
+| 标签 | 示例 | 说明 |
+|------|------|------|
+| `latest` | `latest` | main 分支最新构建 |
+| 分支名 | `v1.2.3` | 特定分支的最新构建 |
+| 版本号 | `v1.2.3`, `1.2.3`, `1.2`, `1` | 语义化版本标签 |
+| SHA | `main-abc1234` | 特定 commit 的构建 |
 
-```yaml
-services:
-  web:
-    image: ghcr.io/jamplesmise/prompt_tool/web:latest
-    # ... 其他配置
-
-  worker:
-    image: ghcr.io/jamplesmise/prompt_tool/worker:latest
-    # ... 其他配置
-
-  # sandbox 使用云端服务，无需本地部署
-```
-
-启动：
+使用特定版本：
 
 ```bash
-cd docker
-docker-compose up -d
+docker pull ghcr.io/jamplesmise/prompt_tool:v1.2.3
+docker pull ghcr.io/jamplesmise/prompt_tool:1.2
 ```
 
-### 方式 2：直接运行
+---
 
-```bash
-# Web 服务
-docker run -d \
-  -p 3000:3000 \
-  -e DATABASE_URL="your_db_url" \
-  -e REDIS_URL="your_redis_url" \
-  ghcr.io/jamplesmise/prompt_tool/web:latest
+## 🔧 环境变量配置
 
-# Worker 服务
-docker run -d \
-  -e DATABASE_URL="your_db_url" \
-  -e REDIS_URL="your_redis_url" \
-  ghcr.io/jamplesmise/prompt_tool/worker:latest
+### 必需变量
 
-# Sandbox 使用云端服务，无需部署
+| 变量 | 说明 | 示例 |
+|------|------|------|
+| `DATABASE_URL` | PostgreSQL 数据库连接 | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | Redis 连接 | `redis://host:6379` |
+| `NEXTAUTH_SECRET` | NextAuth 密钥（随机字符串） | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | 应用访问 URL | `http://localhost:3000` |
+
+### 可选变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `RUN_MIGRATIONS` | 启动时运行数据库迁移 | `false` |
+| `NODE_ENV` | 运行环境 | `production` |
+| `PORT` | Web 服务端口 | `3000` |
+
+---
+
+## 📊 查看构建状态
+
+访问 GitHub Actions 页面：
 ```
+https://github.com/Jamplesmise/prompt_tool/actions
+```
+
+---
 
 ## 🔄 更新镜像
 
 ```bash
 # 拉取最新镜像
-docker-compose pull
+docker pull ghcr.io/jamplesmise/prompt_tool:latest
 
-# 重启服务
+# 停止旧容器
+docker stop prompt-tool
+docker rm prompt-tool
+
+# 启动新容器
+docker run -d \
+  --name prompt-tool \
+  -p 3000:3000 \
+  -e DATABASE_URL="..." \
+  ghcr.io/jamplesmise/prompt_tool:latest
+```
+
+或使用 docker-compose：
+
+```bash
+docker-compose pull
 docker-compose up -d
 ```
+
+---
 
 ## 🌍 多平台支持
 
@@ -132,72 +188,192 @@ docker-compose up -d
 
 Docker 会自动选择适合您系统的镜像。
 
-## 📊 查看镜像信息
+---
 
-```bash
-# 查看镜像详情
-docker image inspect ghcr.io/jamplesmise/prompt_tool/web:latest
-
-# 查看镜像大小
-docker images | grep prompt_tool
-
-# 查看镜像层
-docker history ghcr.io/jamplesmise/prompt_tool/web:latest
-```
-
-## 🛠️ 本地构建（开发者）
+## 🛠️ 本地构建
 
 如果需要本地构建镜像：
 
 ```bash
-# 构建 web 镜像
-docker build -f docker/web.Dockerfile -t my-prompt-tool-web .
+# 克隆仓库
+git clone https://github.com/Jamplesmise/prompt_tool.git
+cd prompt_tool
 
-# 构建 worker 镜像
-docker build -f docker/worker.Dockerfile -t my-prompt-tool-worker .
+# 构建镜像
+docker build -f docker/all-in-one.Dockerfile -t my-prompt-tool .
 
-# sandbox 使用云端服务，无需构建
+# 运行
+docker run -d -p 3000:3000 \
+  -e DATABASE_URL="..." \
+  my-prompt-tool
 ```
 
-## 📝 注意事项
+---
 
-1. **首次构建时间**：首次构建可能需要 10-15 分钟
-2. **缓存加速**：后续构建使用 GitHub Actions 缓存，通常 3-5 分钟
-3. **镜像可见性**：默认镜像继承仓库可见性
-   - 如需公开镜像，在 GitHub 包设置中修改
-4. **存储配额**：GitHub 免费账户有存储和传输限制
-   - 公开仓库：无限存储和传输
-   - 私有仓库：500MB 存储，1GB/月 传输
+## 📝 自动构建触发条件
 
-## 🔗 相关链接
+GitHub Actions 会在以下情况自动构建镜像：
 
-- **GitHub Actions**: https://github.com/Jamplesmise/prompt_tool/actions
-- **GitHub Packages**: https://github.com/Jamplesmise?tab=packages
-- **镜像详情**: https://github.com/Jamplesmise/prompt_tool/pkgs/container/prompt_tool%2Fweb
+- ✅ 推送到 `main` 分支
+- ✅ 推送到 `v*.*.*` 分支（如 v1.2.3）
+- ✅ 创建 tag `v*`（如 v1.2.3）
+- ✅ 向 `main` 分支提交 PR
+
+---
 
 ## 🐛 故障排查
 
-### 构建失败
+### 查看容器日志
 
-1. 查看 Actions 日志找到错误信息
-2. 常见问题：
-   - 依赖安装失败：检查 package.json
-   - 构建超时：考虑优化 Dockerfile
-   - 权限问题：确保 `GITHUB_TOKEN` 有 `packages: write` 权限
+```bash
+docker logs prompt-tool
 
-### 拉取失败
+# 实时查看
+docker logs -f prompt-tool
+```
 
-1. 检查镜像名称是否正确
-2. 如果是私有镜像，确保已登录
-3. 检查网络连接
+### 进入容器调试
 
-### 运行失败
+```bash
+docker exec -it prompt-tool sh
+```
 
-1. 检查环境变量是否正确配置
-2. 检查端口是否已被占用
-3. 查看容器日志：`docker logs <container_id>`
+### 常见问题
+
+#### 1. 数据库连接失败
+
+```
+Error: connect ECONNREFUSED
+```
+
+**解决**：
+- 检查 `DATABASE_URL` 是否正确
+- 确保 PostgreSQL 容器正在运行
+- 检查网络连接
+
+#### 2. Redis 连接失败
+
+```
+Error: Redis connection refused
+```
+
+**解决**：
+- 检查 `REDIS_URL` 是否正确
+- 确保 Redis 容器正在运行
+- 检查网络连接
+
+#### 3. 端口已被占用
+
+```
+Error: bind: address already in use
+```
+
+**解决**：
+- 更换端口：`-p 3001:3000`
+- 或停止占用 3000 端口的服务
+
+#### 4. 数据库迁移失败
+
+**解决**：
+- 手动运行迁移：
+  ```bash
+  docker exec prompt-tool npx prisma migrate deploy
+  ```
+
+---
+
+## 📋 健康检查
+
+检查服务是否正常运行：
+
+```bash
+# 检查 Web 服务
+curl http://localhost:3000/api/health
+
+# 检查容器状态
+docker ps | grep prompt-tool
+
+# 查看容器资源使用
+docker stats prompt-tool
+```
+
+---
+
+## 🔗 相关链接
+
+- **GitHub 仓库**: https://github.com/Jamplesmise/prompt_tool
+- **GitHub Actions**: https://github.com/Jamplesmise/prompt_tool/actions
+- **GitHub Packages**: https://github.com/Jamplesmise?tab=packages
+- **镜像详情**: https://github.com/Jamplesmise/prompt_tool/pkgs/container/prompt_tool
+
+---
+
+## 💡 最佳实践
+
+### 1. 使用环境变量文件
+
+创建 `.env` 文件：
+
+```env
+DATABASE_URL=postgresql://user:pass@postgres:5432/db
+REDIS_URL=redis://redis:6379
+NEXTAUTH_SECRET=your-secret-here
+NEXTAUTH_URL=http://localhost:3000
+```
+
+使用：
+
+```bash
+docker run -d --env-file .env ghcr.io/jamplesmise/prompt_tool:latest
+```
+
+### 2. 数据持久化
+
+使用 volumes 持久化数据：
+
+```yaml
+volumes:
+  - postgres_data:/var/lib/postgresql/data
+  - redis_data:/data
+```
+
+### 3. 资源限制
+
+限制容器资源使用：
+
+```bash
+docker run -d \
+  --memory="2g" \
+  --cpus="1.5" \
+  ghcr.io/jamplesmise/prompt_tool:latest
+```
+
+### 4. 反向代理
+
+使用 Nginx 作为反向代理：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+---
+
+## ⏱️ 构建时间预估
+
+- **首次构建**: 10-15 分钟
+- **后续构建**: 3-5 分钟（使用缓存）
 
 ---
 
 **更新时间**: 2025-12-04
 **版本**: v1.2.3
+**镜像类型**: All-in-One (Web + Worker)
