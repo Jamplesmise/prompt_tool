@@ -210,16 +210,49 @@ type BranchDiffResponse = {
 }
 
 export const promptsService = {
+  // 批量删除提示词
+  async batchDelete(ids: string[]): Promise<ApiResponse<{ deleted: number }>> {
+    const response = await fetch(`${API_BASE}/prompts/batch`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    })
+    return response.json()
+  },
+
+  // 批量导出提示词
+  async batchExport(ids: string[]): Promise<void> {
+    const url = `${API_BASE}/prompts/batch?ids=${ids.join(',')}`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error('导出失败')
+    }
+
+    // 触发下载
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = `prompts-export-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(downloadUrl)
+  },
+
   // 获取提示词列表
   async list(params?: {
     page?: number
     pageSize?: number
     keyword?: string
+    tags?: string[]
   }): Promise<ApiResponse<PromptListResponse>> {
     const searchParams = new URLSearchParams()
     if (params?.page) searchParams.set('page', String(params.page))
     if (params?.pageSize) searchParams.set('pageSize', String(params.pageSize))
     if (params?.keyword) searchParams.set('keyword', params.keyword)
+    if (params?.tags?.length) searchParams.set('tags', params.tags.join(','))
 
     const url = `${API_BASE}/prompts${searchParams.toString() ? `?${searchParams}` : ''}`
     const response = await fetch(url)

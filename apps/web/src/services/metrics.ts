@@ -1,4 +1,5 @@
 import type { ApiResponse, TrendData, TimeRange, GroupBy } from '@platform/shared'
+import type { ModelPerformanceData } from '@/lib/metrics/aggregator'
 
 const API_BASE = '/api/v1'
 
@@ -11,6 +12,13 @@ type TrendQueryParams = {
   taskIds?: string[]
   promptIds?: string[]
   modelIds?: string[]
+}
+
+// 模型性能查询参数
+type ModelPerformanceParams = {
+  range?: TimeRange
+  start?: string
+  end?: string
 }
 
 export const metricsService = {
@@ -29,6 +37,18 @@ export const metricsService = {
     const response = await fetch(`${API_BASE}/stats/trends?${searchParams.toString()}`)
     return response.json()
   },
+
+  // 获取模型性能数据
+  async getModelPerformance(params: ModelPerformanceParams = {}): Promise<ApiResponse<ModelPerformanceData[]>> {
+    const searchParams = new URLSearchParams()
+
+    if (params.range) searchParams.set('range', params.range)
+    if (params.start) searchParams.set('start', params.start)
+    if (params.end) searchParams.set('end', params.end)
+
+    const response = await fetch(`${API_BASE}/stats/models?${searchParams.toString()}`)
+    return response.json()
+  },
 }
 
-export type { TrendQueryParams }
+export type { TrendQueryParams, ModelPerformanceParams }

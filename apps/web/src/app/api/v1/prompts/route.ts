@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
+import type { Prisma as PrismaTypes } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
@@ -18,15 +19,28 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10)
     const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
     const keyword = searchParams.get('keyword') || ''
+    const tagsParam = searchParams.get('tags')
+    const tags = tagsParam ? tagsParam.split(',').filter(Boolean) : []
 
-    const where = keyword
-      ? {
-          OR: [
-            { name: { contains: keyword, mode: 'insensitive' as const } },
-            { description: { contains: keyword, mode: 'insensitive' as const } },
-          ],
-        }
-      : {}
+    // 构建查询条件
+    const conditions: PrismaTypes.PromptWhereInput[] = []
+
+    if (keyword) {
+      conditions.push({
+        OR: [
+          { name: { contains: keyword, mode: 'insensitive' as const } },
+          { description: { contains: keyword, mode: 'insensitive' as const } },
+        ],
+      })
+    }
+
+    if (tags.length > 0) {
+      conditions.push({
+        tags: { hasSome: tags },
+      })
+    }
+
+    const where: PrismaTypes.PromptWhereInput = conditions.length > 0 ? { AND: conditions } : {}
 
     const [prompts, total] = await Promise.all([
       prisma.prompt.findMany({

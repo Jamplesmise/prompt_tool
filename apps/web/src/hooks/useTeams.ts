@@ -160,6 +160,10 @@ export function useTeamMembers(
   teamId: string,
   params?: { page?: number; pageSize?: number }
 ) {
+  const { isLoading: teamsLoading, teams } = useTeamStore()
+  // 确保只在团队列表加载完成且 teamId 在列表中时才发起请求
+  const isValidTeam = !teamsLoading && teams.some((t) => t.id === teamId)
+
   return useQuery({
     queryKey: [...teamMembersKey(teamId), params],
     queryFn: async () => {
@@ -169,7 +173,8 @@ export function useTeamMembers(
       }
       return response.data
     },
-    enabled: !!teamId,
+    enabled: !!teamId && isValidTeam,
+    retry: false, // 不重试 404 等错误
   })
 }
 

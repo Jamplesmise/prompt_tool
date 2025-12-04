@@ -30,7 +30,7 @@ type LoadedABTestTask = {
   id: string
   config: {
     concurrency: number
-    timeoutSeconds: number
+    timeout: number // 超时时间（秒）
     retryCount: number
   }
   abTest: {
@@ -324,7 +324,7 @@ async function executeSingleConfig(
     const messages = buildMessages(rendered.content)
 
     // 调用模型
-    const timeoutMs = task.config.timeoutSeconds * 1000
+    const timeoutMs = (task.config.timeout ?? 180) * 1000
     const result = await executeWithRetry(
       () => executeWithTimeout(() => invokeModel(model, { messages }), timeoutMs),
       {

@@ -4,23 +4,24 @@
 
 | 任务 ID | 任务名称 | 改动文件数 | 代码量 | 状态 |
 |---------|----------|-----------|--------|------|
-| P1-T1 | 创建 StatCard 统计卡片组件 | 2 | ~80 行 | 📋 |
-| P1-T2 | 创建 QuickStart 快速开始组件 | 2 | ~100 行 | 📋 |
-| P1-T3 | 创建 RecentTasks 最近任务组件 | 2 | ~120 行 | 📋 |
-| P1-T4 | 创建 TrendChart 趋势图表组件 | 2 | ~150 行 | 📋 |
-| P1-T5 | 创建 useDashboardStats Hook | 1 | ~60 行 | 📋 |
-| P1-T6 | 重构工作台页面集成所有组件 | 2 | ~100 行 | 📋 |
+| P1-T1 | 创建 StatCard 统计卡片组件 | 2 | ~100 行 | ✅ |
+| P1-T2 | 创建 QuickStart 快速开始组件 | 2 | ~130 行 | ✅ |
+| P1-T3 | 优化 RecentTasks 最近任务组件 | 1 | ~10 行 | ✅ |
+| P1-T4 | 创建 TrendChart 趋势图表组件 | 2 | ~220 行 | ✅ |
+| P1-T5 | 创建 useDashboardStats Hook | 1 | ~125 行 | ✅ |
+| P1-T6 | 重构工作台页面集成所有组件 | 1 | ~110 行 | ✅ |
+| P1-T7 | 趋势图表增强：多时间段+自定义范围 | 5 | ~50 行 | ✅ |
 
 ---
 
-## P1-T1: 创建 StatCard 统计卡片组件
+## P1-T1: 创建 StatCard 统计卡片组件 ✅
 
 ### 任务描述
 创建可复用的统计卡片组件，支持图标、数值、趋势、对比数据展示
 
 ### 文件清单
 - `apps/web/src/components/dashboard/StatCard.tsx` (新增)
-- `apps/web/src/components/dashboard/index.ts` (新增导出)
+- `apps/web/src/components/dashboard/index.ts` (更新导出)
 
 ### 组件接口
 ```typescript
@@ -33,7 +34,8 @@ type StatCardProps = {
     type: 'up' | 'down';
     period: string; // "本周" | "较上周"
   };
-  footer?: string;
+  iconBgColor?: string;      // 渐变起始色
+  iconBgColorEnd?: string;   // 渐变结束色
   onClick?: () => void;
   loading?: boolean;
 }
@@ -48,14 +50,14 @@ type StatCardProps = {
 - hover 效果: translateY(-2px), box-shadow 增强
 
 ### 验收标准
-- [ ] 组件可独立渲染
-- [ ] 支持 loading 状态
-- [ ] hover 动效流畅
-- [ ] 趋势箭头颜色正确
+- [x] 组件可独立渲染
+- [x] 支持 loading 状态
+- [x] hover 动效流畅
+- [x] 趋势箭头颜色正确
 
 ---
 
-## P1-T2: 创建 QuickStart 快速开始组件
+## P1-T2: 创建 QuickStart 快速开始组件 ✅
 
 ### 任务描述
 创建快速开始区域组件，包含主操作按钮和次要快捷入口
@@ -85,10 +87,9 @@ type QuickStartProps = {
 │ │    选择提示词、模型、数据集       │  │
 │ └─────────────────────────────────┘  │
 │                                       │
-│ ┌────────────┐ ┌────────────┐       │  ← 次要按钮 (描边)
-│ │ 📝 新建提示词│ │ 📊 上传数据 │       │
+│ ┌────────────┐ ┌────────────┐       │  ← 次要按钮 (描边) 2x2网格
+│ │ 📝 新建提示词│ │ 📊 上传数据集│       │
 │ └────────────┘ └────────────┘       │
-│                                       │
 │ ┌────────────┐ ┌────────────┐       │
 │ │ 🔧 添加模型 │ │ ⚙️ 配置评估器│       │
 │ └────────────┘ └────────────┘       │
@@ -96,48 +97,20 @@ type QuickStartProps = {
 ```
 
 ### 验收标准
-- [ ] 主按钮使用渐变背景
-- [ ] 次要按钮使用描边样式
-- [ ] 按钮点击触发对应回调
-- [ ] 响应式布局适配
+- [x] 主按钮使用渐变背景
+- [x] 次要按钮使用描边样式
+- [x] 按钮点击触发对应回调
+- [x] 响应式布局适配
 
 ---
 
-## P1-T3: 创建 RecentTasks 最近任务组件
+## P1-T3: 优化 RecentTasks 最近任务组件 ✅
 
 ### 任务描述
-创建最近任务列表组件，展示最近 5 条任务及其实时状态
+优化最近任务列表组件的空状态设计
 
 ### 文件清单
-- `apps/web/src/components/dashboard/RecentTasks.tsx` (新增)
-- `apps/web/src/components/dashboard/index.ts` (更新导出)
-
-### 组件接口
-```typescript
-type RecentTaskItem = {
-  id: string;
-  name: string;
-  status: 'RUNNING' | 'COMPLETED' | 'FAILED' | 'PENDING';
-  progress?: number; // 0-100
-  total?: number;
-  passed?: number;
-  passRate?: number;
-  updatedAt: string;
-}
-
-type RecentTasksProps = {
-  tasks: RecentTaskItem[];
-  loading?: boolean;
-  onViewAll?: () => void;
-  onTaskClick?: (id: string) => void;
-}
-```
-
-### 状态图标
-- RUNNING: 🔄 蓝色 + 进度条
-- COMPLETED: ✅ 绿色 + 通过率
-- FAILED: ❌ 红色 + 通过率
-- PENDING: ⏳ 灰色
+- `apps/web/src/components/dashboard/RecentTasks.tsx` (修改)
 
 ### 空状态设计
 ```
@@ -145,19 +118,18 @@ type RecentTasksProps = {
 │        📝                     │
 │   暂无测试任务                 │
 │   创建你的第一个测试任务吧     │
-│   [+ 创建任务]                │
+│   [+ 创建任务] (渐变按钮)      │
 └───────────────────────────────┘
 ```
 
 ### 验收标准
-- [ ] 正确显示各状态图标和颜色
-- [ ] 运行中任务显示进度条
-- [ ] 空状态有引导按钮
-- [ ] 点击任务可跳转详情
+- [x] 空状态有引导文案
+- [x] 空状态按钮使用渐变样式
+- [x] 点击可跳转创建任务
 
 ---
 
-## P1-T4: 创建 TrendChart 趋势图表组件
+## P1-T4: 创建 TrendChart 趋势图表组件 ✅
 
 ### 任务描述
 创建执行趋势图表组件，基于 Recharts 实现折线图
@@ -173,6 +145,8 @@ pnpm add recharts
 
 ### 组件接口
 ```typescript
+type TimeRangeType = '7d' | '14d' | '30d' | '60d' | 'custom'
+
 type TrendDataPoint = {
   date: string;       // "12/01"
   executed: number;   // 执行数
@@ -182,8 +156,8 @@ type TrendDataPoint = {
 
 type TrendChartProps = {
   data: TrendDataPoint[];
-  timeRange: '7d' | '30d';
-  onTimeRangeChange?: (range: '7d' | '30d') => void;
+  timeRange: TimeRangeType;
+  onTimeRangeChange?: (range: TimeRangeType, customRange?: [string, string]) => void;
   loading?: boolean;
   height?: number;
 }
@@ -195,16 +169,18 @@ type TrendChartProps = {
 - Y轴：数量
 - 悬浮提示：显示详细数据
 - 图例：底部居中
+- 时间范围：7天 | 14天 | 30天 | 60天 | 自定义
 
 ### 验收标准
-- [ ] 图表正确渲染三条折线
-- [ ] 时间范围切换正常
-- [ ] 悬浮提示显示详情
-- [ ] 响应式宽度适配
+- [x] 图表正确渲染三条折线
+- [x] 时间范围切换正常（5个选项）
+- [x] 自定义日期范围选择（最大60天）
+- [x] 悬浮提示显示详情
+- [x] 响应式宽度适配
 
 ---
 
-## P1-T5: 创建 useDashboardStats Hook
+## P1-T5: 创建 useDashboardStats Hook ✅
 
 ### 任务描述
 创建工作台统计数据 Hook，封装 API 调用和数据处理
@@ -214,101 +190,136 @@ type TrendChartProps = {
 
 ### Hook 接口
 ```typescript
-type DashboardStats = {
-  // 统计卡片数据
-  promptCount: number;
-  promptTrend: number;  // 较上周增量
-  datasetCount: number;
-  datasetTrend: number;
-  weeklyTaskCount: number;
-  weeklyTaskTrend: number;
-  passRate: number;
-  passRateTrend: number;
+type TimeRangeType = '7d' | '14d' | '30d' | '60d' | 'custom'
 
-  // 最近任务
-  recentTasks: RecentTaskItem[];
+type UseDashboardStatsReturn = {
+  // 概览数据
+  promptCount: number;
+  datasetCount: number;
+  weeklyTaskCount: number;
+  passRate: number | null;
+  totalCost: number;
+  totalTokens: number;
 
   // 趋势数据
   trendData: TrendDataPoint[];
-}
+  trendSummary: TrendSummary | undefined;
 
-type UseDashboardStatsReturn = {
-  stats: DashboardStats | null;
+  // 最近任务
+  recentTasks: TaskListItem[];
+
+  // 状态
   loading: boolean;
+  overviewLoading: boolean;
+  trendsLoading: boolean;
+  recentTasksLoading: boolean;
   error: Error | null;
-  timeRange: '7d' | '30d';
-  setTimeRange: (range: '7d' | '30d') => void;
+
+  // 操作
+  timeRange: TimeRangeType;
+  setTimeRange: (range: TimeRangeType, customRange?: [string, string]) => void;
   refresh: () => void;
 }
-
-function useDashboardStats(): UseDashboardStatsReturn
 ```
 
 ### API 调用
 ```typescript
 // 统计数据
-GET /api/v1/stats/dashboard
+GET /api/v1/stats/overview
 
 // 趋势数据
-GET /api/v1/stats/trend?range=7d
+GET /api/v1/stats/trends?range=7d
+GET /api/v1/stats/trends?range=custom&start=2024-01-01&end=2024-01-15
 ```
 
 ### 验收标准
-- [ ] 数据正确获取和解析
-- [ ] loading 状态正确
-- [ ] 错误处理完善
-- [ ] 时间范围切换触发重新请求
+- [x] 数据正确获取和解析
+- [x] loading 状态正确
+- [x] 错误处理完善
+- [x] 时间范围切换触发重新请求
+- [x] 支持自定义日期范围
 
 ---
 
-## P1-T6: 重构工作台页面集成所有组件
+## P1-T6: 重构工作台页面集成所有组件 ✅
 
 ### 任务描述
 重构工作台页面，集成所有新组件，替换原有实现
 
 ### 文件清单
 - `apps/web/src/app/(dashboard)/page.tsx` (修改)
-- `apps/web/src/styles/dashboard.module.css` (新增，可选)
 
 ### 页面结构
 ```tsx
 export default function DashboardPage() {
-  const { stats, loading, timeRange, setTimeRange } = useDashboardStats();
+  const {
+    promptCount, datasetCount, weeklyTaskCount, passRate,
+    trendData, timeRange, setTimeRange,
+    overviewLoading, trendsLoading
+  } = useDashboardStats();
   const router = useRouter();
 
   return (
-    <div className="dashboard-page">
-      {/* 统计卡片行 */}
+    <div>
+      {/* 统计卡片行 - 4列 */}
       <Row gutter={[16, 16]}>
-        <Col span={4}><StatCard ... /></Col>
-        <Col span={4}><StatCard ... /></Col>
-        <Col span={4}><StatCard ... /></Col>
-        <Col span={4}><StatCard ... /></Col>
-        <Col span={8}><MiniTrendChart /></Col>
+        <Col xs={24} sm={12} lg={6}><StatCard ... /></Col>
+        <Col xs={24} sm={12} lg={6}><StatCard ... /></Col>
+        <Col xs={24} sm={12} lg={6}><StatCard ... /></Col>
+        <Col xs={24} sm={12} lg={6}><StatCard ... /></Col>
       </Row>
 
       {/* 快速开始 + 最近任务 */}
-      <Row gutter={[16, 16]}>
-        <Col span={12}><QuickStart ... /></Col>
-        <Col span={12}><RecentTasks ... /></Col>
+      <Row gutter={[16, 16]} className="mt-4">
+        <Col xs={24} lg={10}><QuickStart /></Col>
+        <Col xs={24} lg={14}><RecentTasks /></Col>
       </Row>
 
       {/* 趋势图表 */}
-      <TrendChart
-        data={stats?.trendData}
-        timeRange={timeRange}
-        onTimeRangeChange={setTimeRange}
-      />
+      <div className="mt-4">
+        <TrendChart
+          data={trendData}
+          timeRange={timeRange}
+          onTimeRangeChange={setTimeRange}
+          loading={trendsLoading}
+        />
+      </div>
     </div>
   );
 }
 ```
 
 ### 验收标准
-- [ ] 页面布局符合设计稿
-- [ ] 所有组件正确渲染
-- [ ] 路由跳转正常
-- [ ] 加载状态展示正确
+- [x] 页面布局符合设计稿
+- [x] 所有组件正确渲染
+- [x] 路由跳转正常
+- [x] 加载状态展示正确
+
+---
+
+## P1-T7: 趋势图表增强 - 多时间段+自定义范围 ✅
+
+### 任务描述
+增强趋势图表支持更多预设时间段和自定义日期范围选择
+
+### 文件清单
+- `apps/web/src/components/dashboard/TrendChart.tsx` (修改)
+- `apps/web/src/hooks/useDashboardStats.ts` (修改)
+- `apps/web/src/services/stats.ts` (修改)
+- `apps/web/src/app/api/v1/stats/trends/route.ts` (修改)
+- `apps/web/src/lib/metrics/aggregator.ts` (修改)
+- `packages/shared/src/types/monitor.ts` (修改)
+
+### 功能说明
+- 时间范围选项：7天 | 14天 | 30天 | 60天 | 自定义
+- 自定义日期范围：选择起止日期，最大跨度60天
+- 日期选择器在选择"自定义"后显示
+
+### 验收标准
+- [x] 5个预设时间段可切换
+- [x] 自定义日期范围选择器
+- [x] 最大60天限制
+- [x] API 支持新时间范围
 
 ---
 
@@ -316,4 +327,10 @@ export default function DashboardPage() {
 
 | 日期 | 任务 | 完成情况 | 备注 |
 |------|------|---------|------|
-| | | | |
+| 2024-12-04 | P1-T1 | ✅ | 创建 StatCard 组件，支持渐变图标、hover动效 |
+| 2024-12-04 | P1-T2 | ✅ | 创建 QuickStart 组件，渐变主按钮+2x2网格次要按钮 |
+| 2024-12-04 | P1-T3 | ✅ | 优化 RecentTasks 空状态设计 |
+| 2024-12-04 | P1-T4 | ✅ | 创建 TrendChart 组件，基于 Recharts |
+| 2024-12-04 | P1-T5 | ✅ | 创建 useDashboardStats Hook |
+| 2024-12-04 | P1-T6 | ✅ | 重构工作台页面，集成所有新组件 |
+| 2024-12-04 | P1-T7 | ✅ | 趋势图表增强：支持 7/14/30/60天 + 自定义日期范围(最大60天) |
