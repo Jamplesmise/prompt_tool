@@ -12,6 +12,36 @@ const theme = {
   token: {
     colorPrimary: '#1677ff',
     borderRadius: 6,
+    fontSize: 14,
+    fontSizeSM: 13,
+    fontSizeLG: 16,
+    fontSizeXL: 20,
+    fontSizeHeading1: 38,
+    fontSizeHeading2: 30,
+    fontSizeHeading3: 24,
+    fontSizeHeading4: 20,
+    fontSizeHeading5: 16,
+  },
+  components: {
+    Table: {
+      fontSize: 14,
+      fontSizeSM: 13,
+    },
+    Button: {
+      fontSize: 14,
+    },
+    Input: {
+      fontSize: 14,
+    },
+    Select: {
+      fontSize: 14,
+    },
+    Menu: {
+      fontSize: 14,
+    },
+    Typography: {
+      fontSize: 14,
+    },
   },
 }
 
