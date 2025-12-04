@@ -34,6 +34,9 @@ RUN corepack enable pnpm && pnpm --filter @platform/evaluators build
 # 生成 Prisma Client
 RUN cd apps/web && npx prisma generate
 
+# 确保 public 目录存在（即使为空）
+RUN mkdir -p apps/web/public
+
 # 构建 Next.js
 RUN corepack enable pnpm && pnpm build
 
