@@ -3,6 +3,9 @@ import { getSession } from '@/lib/auth'
 import { success, unauthorized, internalError } from '@/lib/api'
 import { getQueueStats, getTaskQueue } from '@/lib/queue'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/queue/status - 获取队列状态
 export async function GET() {
   try {

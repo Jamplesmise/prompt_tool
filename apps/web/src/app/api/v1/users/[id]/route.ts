@@ -5,6 +5,9 @@ import { success, error, unauthorized, forbidden, notFound, badRequest } from '@
 import { ERROR_CODES } from '@platform/shared'
 import type { UserRole } from '@prisma/client'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = {
   params: Promise<{ id: string }>
 }

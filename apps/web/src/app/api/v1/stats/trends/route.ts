@@ -4,6 +4,9 @@ import { success, unauthorized, badRequest, internalError } from '@/lib/api'
 import { getTrendData } from '@/lib/metrics/aggregator'
 import type { TimeRange, GroupBy } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/stats/trends - 获取趋势数据
 export async function GET(request: NextRequest) {
   try {

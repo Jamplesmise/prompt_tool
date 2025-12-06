@@ -4,6 +4,9 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, forbidden } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/audit-logs - 查询审计日志
 export async function GET(request: NextRequest) {
   try {

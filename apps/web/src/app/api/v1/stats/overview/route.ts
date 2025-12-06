@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { success, unauthorized, internalError } from '@/lib/api'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type TaskStats = {
   passRate: number | null
   avgLatencyMs: number | null
