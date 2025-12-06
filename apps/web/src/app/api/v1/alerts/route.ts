@@ -4,6 +4,9 @@ import { getSession } from '@/lib/auth'
 import { success, unauthorized, internalError } from '@/lib/api'
 import type { AlertStatus } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/alerts - 获取告警列表
 export async function GET(request: NextRequest) {
   try {

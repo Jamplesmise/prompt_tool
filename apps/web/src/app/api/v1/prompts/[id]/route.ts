@@ -6,6 +6,9 @@ import { success, error, unauthorized } from '@/lib/api'
 import { mergeVariables, extractVariableNames } from '@/lib/template'
 import { ERROR_CODES } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = { params: Promise<{ id: string }> }
 
 // GET /api/v1/prompts/:id - 获取提示词详情

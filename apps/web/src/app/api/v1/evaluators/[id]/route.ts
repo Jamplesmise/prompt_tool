@@ -5,6 +5,9 @@ import { success, error, unauthorized, notFound } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 import { validateCode } from '@/lib/sandbox'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = { params: Promise<{ id: string }> }
 
 // GET /api/v1/evaluators/:id - 获取评估器详情

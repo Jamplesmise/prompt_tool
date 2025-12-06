@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/auth'
 import { success, unauthorized, badRequest, internalError } from '@/lib/api'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // A/B 测试配置类型
 type ABTestConfig = {
   promptId: string
