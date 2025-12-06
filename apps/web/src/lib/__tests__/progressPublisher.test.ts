@@ -1,4 +1,25 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+// Mock Redis 模块
+const mockPublish = vi.fn().mockResolvedValue(1)
+const mockSubscribe = vi.fn().mockResolvedValue(undefined)
+const mockUnsubscribe = vi.fn().mockResolvedValue(undefined)
+const mockOn = vi.fn()
+const mockOff = vi.fn()
+
+vi.mock('../redis', () => ({
+  redis: {
+    publish: (...args: unknown[]) => mockPublish(...args),
+  },
+  getSubscriberConnection: () => ({
+    subscribe: (...args: unknown[]) => mockSubscribe(...args),
+    unsubscribe: (...args: unknown[]) => mockUnsubscribe(...args),
+    on: (...args: unknown[]) => mockOn(...args),
+    off: (...args: unknown[]) => mockOff(...args),
+  }),
+  PUBSUB_PREFIX: 'test-prefix:',
+}))
+
 import {
   publishProgress,
   publishCompleted,
@@ -7,182 +28,138 @@ import {
   subscribeProgress,
   getListenerCount,
 } from '../progressPublisher'
-import type { ProgressEvent } from '../progressPublisher'
 
-describe('progressPublisher.ts', () => {
+describe('progressPublisher.ts (Redis Pub/Sub)', () => {
   const taskId = 'test-task-id'
 
-  describe('subscribeProgress', () => {
-    it('应该订阅进度更新', () => {
-      const callback = vi.fn()
-      const unsubscribe = subscribeProgress(taskId, callback)
-
-      publishProgress(taskId, { total: 100, completed: 50, failed: 0 })
-
-      expect(callback).toHaveBeenCalledTimes(1)
-      expect(callback).toHaveBeenCalledWith({
-        type: 'progress',
-        data: { total: 100, completed: 50, failed: 0 },
-      })
-
-      unsubscribe()
-    })
-
-    it('取消订阅后不应再收到事件', () => {
-      const callback = vi.fn()
-      const unsubscribe = subscribeProgress(taskId, callback)
-
-      publishProgress(taskId, { total: 100, completed: 1, failed: 0 })
-      expect(callback).toHaveBeenCalledTimes(1)
-
-      unsubscribe()
-
-      publishProgress(taskId, { total: 100, completed: 2, failed: 0 })
-      expect(callback).toHaveBeenCalledTimes(1) // 不应增加
-    })
-
-    it('不同任务的订阅应该隔离', () => {
-      const callback1 = vi.fn()
-      const callback2 = vi.fn()
-
-      const unsub1 = subscribeProgress('task-1', callback1)
-      const unsub2 = subscribeProgress('task-2', callback2)
-
-      publishProgress('task-1', { total: 10, completed: 5, failed: 0 })
-
-      expect(callback1).toHaveBeenCalledTimes(1)
-      expect(callback2).not.toHaveBeenCalled()
-
-      unsub1()
-      unsub2()
-    })
-
-    it('多个订阅者应该都收到事件', () => {
-      const callback1 = vi.fn()
-      const callback2 = vi.fn()
-
-      const unsub1 = subscribeProgress(taskId, callback1)
-      const unsub2 = subscribeProgress(taskId, callback2)
-
-      publishProgress(taskId, { total: 10, completed: 5, failed: 0 })
-
-      expect(callback1).toHaveBeenCalledTimes(1)
-      expect(callback2).toHaveBeenCalledTimes(1)
-
-      unsub1()
-      unsub2()
-    })
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  describe('publishProgress', () => {
-    it('应该发布进度事件', () => {
-      const callback = vi.fn()
-      const unsubscribe = subscribeProgress(taskId, callback)
-
-      const progress = { total: 100, completed: 25, failed: 5 }
+  describe('publish functions', () => {
+    it('publishProgress 应该发布进度事件到 Redis', async () => {
+      const progress = { total: 100, completed: 50, failed: 0 }
       publishProgress(taskId, progress)
 
-      expect(callback).toHaveBeenCalledWith({
-        type: 'progress',
-        data: progress,
+      // 等待异步操作完成
+      await vi.waitFor(() => {
+        expect(mockPublish).toHaveBeenCalledTimes(1)
       })
 
-      unsubscribe()
+      expect(mockPublish).toHaveBeenCalledWith(
+        `test-prefix:task:${taskId}`,
+        JSON.stringify({ type: 'progress', data: progress })
+      )
     })
-  })
 
-  describe('publishCompleted', () => {
-    it('应该发布完成事件', () => {
-      const callback = vi.fn()
-      const unsubscribe = subscribeProgress(taskId, callback)
-
+    it('publishCompleted 应该发布完成事件到 Redis', async () => {
       const stats = { passRate: 0.9, avgLatencyMs: 150 }
       publishCompleted(taskId, stats)
 
-      expect(callback).toHaveBeenCalledWith({
-        type: 'completed',
-        data: { status: 'COMPLETED', stats },
+      await vi.waitFor(() => {
+        expect(mockPublish).toHaveBeenCalledTimes(1)
       })
 
-      unsubscribe()
+      expect(mockPublish).toHaveBeenCalledWith(
+        `test-prefix:task:${taskId}`,
+        JSON.stringify({
+          type: 'completed',
+          data: { status: 'COMPLETED', stats },
+        })
+      )
     })
-  })
 
-  describe('publishFailed', () => {
-    it('应该发布失败事件', () => {
-      const callback = vi.fn()
-      const unsubscribe = subscribeProgress(taskId, callback)
-
+    it('publishFailed 应该发布失败事件到 Redis', async () => {
       publishFailed(taskId, '执行失败：网络错误')
 
-      expect(callback).toHaveBeenCalledWith({
-        type: 'failed',
-        data: { status: 'FAILED', error: '执行失败：网络错误' },
+      await vi.waitFor(() => {
+        expect(mockPublish).toHaveBeenCalledTimes(1)
       })
 
-      unsubscribe()
+      expect(mockPublish).toHaveBeenCalledWith(
+        `test-prefix:task:${taskId}`,
+        JSON.stringify({
+          type: 'failed',
+          data: { status: 'FAILED', error: '执行失败：网络错误' },
+        })
+      )
+    })
+
+    it('publishStopped 应该发布停止事件到 Redis', async () => {
+      publishStopped(taskId)
+
+      await vi.waitFor(() => {
+        expect(mockPublish).toHaveBeenCalledTimes(1)
+      })
+
+      expect(mockPublish).toHaveBeenCalledWith(
+        `test-prefix:task:${taskId}`,
+        JSON.stringify({
+          type: 'stopped',
+          data: { status: 'STOPPED' },
+        })
+      )
     })
   })
 
-  describe('publishStopped', () => {
-    it('应该发布停止事件', () => {
+  describe('subscribeProgress', () => {
+    it('应该订阅 Redis 频道', () => {
       const callback = vi.fn()
       const unsubscribe = subscribeProgress(taskId, callback)
 
-      publishStopped(taskId)
-
-      expect(callback).toHaveBeenCalledWith({
-        type: 'stopped',
-        data: { status: 'STOPPED' },
-      })
+      expect(mockSubscribe).toHaveBeenCalledWith(`test-prefix:task:${taskId}`)
+      expect(mockOn).toHaveBeenCalledWith('message', expect.any(Function))
 
       unsubscribe()
+    })
+
+    it('取消订阅应该调用 unsubscribe 和 off', () => {
+      const callback = vi.fn()
+      const unsubscribe = subscribeProgress(taskId, callback)
+
+      unsubscribe()
+
+      expect(mockOff).toHaveBeenCalledWith('message', expect.any(Function))
+      expect(mockUnsubscribe).toHaveBeenCalledWith(`test-prefix:task:${taskId}`)
+    })
+
+    it('收到消息时应该调用回调', () => {
+      const callback = vi.fn()
+      subscribeProgress(taskId, callback)
+
+      // 获取注册的消息处理函数
+      const messageHandler = mockOn.mock.calls.find(
+        (call) => call[0] === 'message'
+      )?.[1]
+
+      expect(messageHandler).toBeDefined()
+
+      // 模拟收到消息
+      const event = { type: 'progress', data: { total: 100, completed: 50, failed: 0 } }
+      messageHandler(`test-prefix:task:${taskId}`, JSON.stringify(event))
+
+      expect(callback).toHaveBeenCalledWith(event)
+    })
+
+    it('收到其他频道的消息时不应调用回调', () => {
+      const callback = vi.fn()
+      subscribeProgress(taskId, callback)
+
+      const messageHandler = mockOn.mock.calls.find(
+        (call) => call[0] === 'message'
+      )?.[1]
+
+      // 模拟收到其他频道的消息
+      const event = { type: 'progress', data: { total: 10, completed: 5, failed: 0 } }
+      messageHandler('test-prefix:task:other-task', JSON.stringify(event))
+
+      expect(callback).not.toHaveBeenCalled()
     })
   })
 
   describe('getListenerCount', () => {
-    it('应该返回正确的监听器数量', () => {
-      expect(getListenerCount(taskId)).toBe(0)
-
-      const unsub1 = subscribeProgress(taskId, vi.fn())
-      expect(getListenerCount(taskId)).toBe(1)
-
-      const unsub2 = subscribeProgress(taskId, vi.fn())
-      expect(getListenerCount(taskId)).toBe(2)
-
-      unsub1()
-      expect(getListenerCount(taskId)).toBe(1)
-
-      unsub2()
-      expect(getListenerCount(taskId)).toBe(0)
-    })
-
-    it('不同任务的监听器数量应该分开计算', () => {
-      const unsub1 = subscribeProgress('task-a', vi.fn())
-      const unsub2 = subscribeProgress('task-b', vi.fn())
-
-      expect(getListenerCount('task-a')).toBe(1)
-      expect(getListenerCount('task-b')).toBe(1)
-      expect(getListenerCount('task-c')).toBe(0)
-
-      unsub1()
-      unsub2()
-    })
-  })
-
-  describe('事件类型', () => {
-    it('事件应该包含正确的 type', () => {
-      const events: ProgressEvent[] = []
-      const unsubscribe = subscribeProgress(taskId, (e) => events.push(e))
-
-      publishProgress(taskId, { total: 10, completed: 0, failed: 0 })
-      publishCompleted(taskId, {})
-      publishFailed('other-task', 'error') // 不同任务，不应收到
-      publishStopped(taskId)
-
-      expect(events.map((e) => e.type)).toEqual(['progress', 'completed', 'stopped'])
-
-      unsubscribe()
+    it('应该返回 -1（Redis Pub/Sub 无法获取订阅者数量）', () => {
+      expect(getListenerCount(taskId)).toBe(-1)
     })
   })
 })

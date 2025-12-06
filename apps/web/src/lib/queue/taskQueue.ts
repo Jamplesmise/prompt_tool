@@ -1,7 +1,7 @@
 // BullMQ 任务队列定义
 
 import { Queue, QueueEvents } from 'bullmq'
-import { redis } from '../redis'
+import { redis, BULLMQ_PREFIX } from '../redis'
 
 // 任务 Job 数据类型
 export type TaskJobData = {
@@ -34,6 +34,7 @@ export function getTaskQueue(): Queue<TaskJobData, TaskJobResult> {
   if (!globalForQueue.taskQueue) {
     globalForQueue.taskQueue = new Queue<TaskJobData, TaskJobResult>(TASK_QUEUE_NAME, {
       connection: redis,
+      prefix: BULLMQ_PREFIX,  // 使用自定义前缀隔离，生成 prompt-tool:task-execution:*
       defaultJobOptions: {
         removeOnComplete: 100,  // 保留最近 100 个完成的任务
         removeOnFail: 100,      // 保留最近 100 个失败的任务
@@ -51,6 +52,7 @@ export function getTaskQueueEvents(): QueueEvents {
   if (!globalForQueue.taskQueueEvents) {
     globalForQueue.taskQueueEvents = new QueueEvents(TASK_QUEUE_NAME, {
       connection: redis,
+      prefix: BULLMQ_PREFIX,
     })
   }
   return globalForQueue.taskQueueEvents
