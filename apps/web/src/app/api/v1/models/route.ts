@@ -25,7 +25,7 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
-    const data = models.map((model) => ({
+    const list = models.map((model) => ({
       id: model.id,
       name: model.name,
       modelId: model.modelId,
@@ -38,7 +38,10 @@ export async function GET() {
       isActive: model.isActive,
     }))
 
-    return NextResponse.json(success(data))
+    return NextResponse.json(success({
+      list,
+      total: list.length,
+    }))
   } catch (err) {
     console.error('Get models error:', err)
     return NextResponse.json(

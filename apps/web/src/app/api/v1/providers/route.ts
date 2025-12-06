@@ -30,7 +30,7 @@ export async function GET() {
     })
 
     // 脱敏 API Key
-    const data = providers.map((provider) => ({
+    const list = providers.map((provider) => ({
       id: provider.id,
       name: provider.name,
       type: provider.type.toLowerCase(),
@@ -40,7 +40,10 @@ export async function GET() {
       models: provider.models,
     }))
 
-    return NextResponse.json(success(data))
+    return NextResponse.json(success({
+      list,
+      total: list.length,
+    }))
   } catch (err) {
     console.error('Get providers error:', err)
     return NextResponse.json(
