@@ -717,7 +717,7 @@ export default function SettingsPage() {
             <Input placeholder="搜索用户" prefix={<SearchOutlined />} value={userSearch} onChange={(e) => { setUserSearch(e.target.value); setUserPage(1) }} style={{ width: 160 }} allowClear />
             <Select placeholder="角色" value={userRoleFilter || undefined} onChange={(v) => { setUserRoleFilter(v || ''); setUserPage(1) }} options={[{ label: '全部', value: '' }, ...userRoleOptions]} style={{ width: 100 }} allowClear />
           </Space>
-          <Table<UserWithCount> columns={userColumns} dataSource={usersData?.list} rowKey="id" loading={usersLoading} size="small" pagination={{ current: userPage, pageSize: 10, total: usersData?.total, onChange: setUserPage, showSizeChanger: false, showTotal: (t) => `共 ${t} 人` }} />
+          <Table<UserListItem> columns={userColumns} dataSource={usersData?.list} rowKey="id" loading={usersLoading} size="small" pagination={{ current: userPage, pageSize: 10, total: usersData?.total, onChange: setUserPage, showSizeChanger: false, showTotal: (t) => `共 ${t} 人` }} />
         </div>
       ),
     },
