@@ -12,7 +12,7 @@ export {
 
 export {
   SCHEDULER_QUEUE_NAME,
-  schedulerQueue,
+  getSchedulerQueue,
   scheduleTask,
   removeScheduledJob,
   runScheduledTaskNow,
