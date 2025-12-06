@@ -46,12 +46,13 @@ RUN cd apps/web && npx prisma generate
 
 # 设置构建时环境变量（占位符，仅用于构建）
 # 注意：这些只是构建时的占位符，运行时会被实际环境变量覆盖
-# 队列使用延迟初始化模式，构建时不会尝试连接外部服务
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 ENV NEXTAUTH_SECRET="build-time-placeholder-secret-32"
 ENV NEXTAUTH_URL="http://localhost:3000"
-ENV REDIS_URL="redis://localhost:6379"
+ENV REDIS_URL="redis://placeholder:6379"
 ENV ENCRYPTION_KEY="build-time-placeholder-key-32ch"
+# 禁用构建时的 Worker 初始化
+ENV SKIP_WORKER_INIT="true"
 
 # 构建 Next.js 应用
 RUN cd apps/web && pnpm build
@@ -80,11 +81,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
 # 复制 Prisma schema 和生成的客户端（运行时需要）
-# Prisma Client 在 monorepo 中会被安装到根 node_modules
+# Prisma Client 在 pnpm monorepo 中位于 .pnpm 目录下
 COPY --from=builder /app/apps/web/prisma ./apps/web/prisma
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client@*/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/.pnpm/@prisma+client@*/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # 设置权限
 RUN chown -R nextjs:nodejs /app
