@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { success, unauthorized, internalError } from '@/lib/api'
-import { getQueueStats, taskQueue } from '@/lib/queue'
+import { getQueueStats, getTaskQueue } from '@/lib/queue'
 
 // GET /api/v1/queue/status - 获取队列状态
 export async function GET() {
@@ -13,6 +13,9 @@ export async function GET() {
 
     // 获取队列统计
     const stats = await getQueueStats()
+
+    // 获取队列实例
+    const taskQueue = getTaskQueue()
 
     // 获取队列是否暂停
     const isPaused = await taskQueue.isPaused()

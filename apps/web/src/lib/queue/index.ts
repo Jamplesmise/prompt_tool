@@ -2,8 +2,8 @@
 
 export {
   TASK_QUEUE_NAME,
-  taskQueue,
-  taskQueueEvents,
+  getTaskQueue,
+  getTaskQueueEvents,
   enqueueTask,
   getQueuedTaskStatus,
   removeFromQueue,

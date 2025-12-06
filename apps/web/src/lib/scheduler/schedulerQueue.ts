@@ -22,22 +22,35 @@ export type SchedulerJobResult = {
 // 队列名称
 export const SCHEDULER_QUEUE_NAME = 'scheduler'
 
-// 创建调度队列
-export const schedulerQueue = new Queue<SchedulerJobData, SchedulerJobResult>(
-  SCHEDULER_QUEUE_NAME,
-  {
-    connection: redis,
-    defaultJobOptions: {
-      removeOnComplete: 100,
-      removeOnFail: 100,
-      attempts: 3,
-      backoff: {
-        type: 'exponential',
-        delay: 5000,
-      },
-    },
+// 使用全局变量缓存队列实例（避免热重载时重复创建）
+const globalForScheduler = globalThis as unknown as {
+  schedulerQueue: Queue<SchedulerJobData, SchedulerJobResult> | undefined
+}
+
+/**
+ * 获取调度队列（延迟初始化）
+ * 采用 FastGPT 的模式：调用时才创建连接，避免构建时连接 Redis
+ */
+export function getSchedulerQueue(): Queue<SchedulerJobData, SchedulerJobResult> {
+  if (!globalForScheduler.schedulerQueue) {
+    globalForScheduler.schedulerQueue = new Queue<SchedulerJobData, SchedulerJobResult>(
+      SCHEDULER_QUEUE_NAME,
+      {
+        connection: redis,
+        defaultJobOptions: {
+          removeOnComplete: 100,
+          removeOnFail: 100,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+        },
+      }
+    )
   }
-)
+  return globalForScheduler.schedulerQueue
+}
 
 /**
  * 调度定时任务（添加到延迟队列）
@@ -75,7 +88,8 @@ export async function scheduleTask(scheduledTaskId: string): Promise<void> {
   // 先移除同一个定时任务的旧 Job（如果有）
   await removeScheduledJob(scheduledTaskId)
 
-  await schedulerQueue.add(
+  const queue = getSchedulerQueue()
+  await queue.add(
     'scheduled-run',
     { scheduledTaskId },
     {
@@ -95,7 +109,8 @@ export async function scheduleTask(scheduledTaskId: string): Promise<void> {
  * 移除定时任务的调度 Job
  */
 export async function removeScheduledJob(scheduledTaskId: string): Promise<void> {
-  const jobs = await schedulerQueue.getDelayed()
+  const queue = getSchedulerQueue()
+  const jobs = await queue.getDelayed()
 
   for (const job of jobs) {
     if (job.data.scheduledTaskId === scheduledTaskId) {
@@ -110,7 +125,8 @@ export async function removeScheduledJob(scheduledTaskId: string): Promise<void>
 export async function runScheduledTaskNow(scheduledTaskId: string): Promise<string> {
   const jobId = `scheduled-manual-${scheduledTaskId}-${Date.now()}`
 
-  const job = await schedulerQueue.add(
+  const queue = getSchedulerQueue()
+  const job = await queue.add(
     'scheduled-run',
     { scheduledTaskId },
     {
@@ -174,12 +190,13 @@ export async function getSchedulerQueueStats(): Promise<{
   failed: number
   delayed: number
 }> {
+  const queue = getSchedulerQueue()
   const [waiting, active, completed, failed, delayed] = await Promise.all([
-    schedulerQueue.getWaitingCount(),
-    schedulerQueue.getActiveCount(),
-    schedulerQueue.getCompletedCount(),
-    schedulerQueue.getFailedCount(),
-    schedulerQueue.getDelayedCount(),
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
   ])
 
   return { waiting, active, completed, failed, delayed }
