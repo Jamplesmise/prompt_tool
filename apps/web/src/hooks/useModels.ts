@@ -18,7 +18,7 @@ export function useProviders() {
       if (response.code !== 200) {
         throw new Error(response.message)
       }
-      return response.data
+      return response.data.list
     },
   })
 }
@@ -95,7 +95,7 @@ export function useModels() {
       if (response.code !== 200) {
         throw new Error(response.message)
       }
-      return response.data
+      return response.data.list
     },
   })
 }

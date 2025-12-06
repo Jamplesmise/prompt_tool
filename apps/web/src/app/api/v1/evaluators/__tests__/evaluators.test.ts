@@ -72,9 +72,10 @@ describe('评估器 API 集成测试', () => {
       const data = await response.json()
 
       expect(data.code).toBe(200)
-      expect(data.data).toHaveLength(1)
-      expect(data.data[0].name).toBe('测试评估器')
-      expect(data.data[0].type).toBe('code')
+      expect(data.data.list).toHaveLength(1)
+      expect(data.data.list[0].name).toBe('测试评估器')
+      expect(data.data.list[0].type).toBe('code')
+      expect(data.data.total).toBe(1)
     })
 
     it('支持按类型过滤', async () => {

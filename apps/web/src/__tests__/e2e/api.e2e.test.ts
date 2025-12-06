@@ -500,7 +500,7 @@ describe('API 端到端测试', () => {
 
       expect(status).toBe(200)
       expect((data as { code: number }).code).toBe(200)
-      expect((data as { data: unknown[] }).data).toBeInstanceOf(Array)
+      expect((data as { data: { list: unknown[]; total: number } }).data.list).toBeInstanceOf(Array)
     })
 
     it('4.2 创建提供商', async () => {
@@ -570,7 +570,7 @@ describe('API 端到端测试', () => {
 
       expect(status).toBe(200)
       expect((data as { code: number }).code).toBe(200)
-      expect((data as { data: unknown[] }).data).toBeInstanceOf(Array)
+      expect((data as { data: { list: unknown[]; total: number } }).data.list).toBeInstanceOf(Array)
     })
 
     it('4.6 更新模型', async () => {
@@ -601,7 +601,7 @@ describe('API 端到端测试', () => {
 
       expect(status).toBe(200)
       expect((data as { code: number }).code).toBe(200)
-      expect((data as { data: unknown[] }).data).toBeInstanceOf(Array)
+      expect((data as { data: { list: unknown[]; total: number } }).data.list).toBeInstanceOf(Array)
     })
 
     it('5.2 获取预置评估器列表', async () => {
