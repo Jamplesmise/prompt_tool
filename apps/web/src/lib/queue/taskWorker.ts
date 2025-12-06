@@ -2,7 +2,7 @@
 
 import { Worker, Job } from 'bullmq'
 import { Prisma } from '@prisma/client'
-import { redis } from '../redis'
+import { redis, BULLMQ_PREFIX } from '../redis'
 import { prisma } from '../prisma'
 import {
   ConcurrencyLimiter,
@@ -629,6 +629,7 @@ export function createTaskWorker(): Worker<TaskJobData, TaskJobResult> {
     processTask,
     {
       connection: redis,
+      prefix: BULLMQ_PREFIX,  // 与队列保持一致
       concurrency: WORKER_CONCURRENCY,
     }
   )

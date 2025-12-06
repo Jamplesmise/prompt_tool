@@ -1,7 +1,7 @@
 // 定时任务调度队列
 
 import { Queue } from 'bullmq'
-import { redis } from '../redis'
+import { redis, BULLMQ_PREFIX } from '../redis'
 import { prisma } from '../prisma'
 import { getNextRunTime, getDelayUntilNextRun } from './cronParser'
 
@@ -37,6 +37,7 @@ export function getSchedulerQueue(): Queue<SchedulerJobData, SchedulerJobResult>
       SCHEDULER_QUEUE_NAME,
       {
         connection: redis,
+        prefix: BULLMQ_PREFIX,  // 与任务队列使用相同前缀
         defaultJobOptions: {
           removeOnComplete: 100,
           removeOnFail: 100,

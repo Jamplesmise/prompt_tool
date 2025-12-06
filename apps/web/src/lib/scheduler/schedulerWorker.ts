@@ -1,7 +1,7 @@
 // 定时任务调度 Worker
 
 import { Worker, Job } from 'bullmq'
-import { redis } from '../redis'
+import { redis, BULLMQ_PREFIX } from '../redis'
 import { prisma } from '../prisma'
 import { enqueueTask } from '../queue'
 import { scheduleTask, SCHEDULER_QUEUE_NAME } from './schedulerQueue'
@@ -143,6 +143,7 @@ export function createSchedulerWorker(): Worker<SchedulerJobData, SchedulerJobRe
     },
     {
       connection: redis,
+      prefix: BULLMQ_PREFIX,  // 与队列保持一致
       concurrency: 5,
     }
   )
