@@ -7,6 +7,9 @@ import { enqueueTask, getQueuedTaskStatus } from '@/lib/queue'
 // 确保 Worker 在服务端启动
 import '@/lib/queue/initWorker'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = {
   params: Promise<{ id: string }>
 }

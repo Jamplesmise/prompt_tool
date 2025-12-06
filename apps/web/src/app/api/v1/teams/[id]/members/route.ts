@@ -5,6 +5,9 @@ import { success, error, unauthorized, forbidden, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 import type { TeamRole } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 // GET /api/v1/teams/[id]/members - 获取团队成员列表

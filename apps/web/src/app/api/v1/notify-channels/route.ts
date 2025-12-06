@@ -4,6 +4,9 @@ import { getSession } from '@/lib/auth'
 import { success, unauthorized, badRequest, internalError } from '@/lib/api'
 import type { NotifyChannelType, NotifyChannelConfig } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/notify-channels - 获取通知渠道列表
 export async function GET(request: NextRequest) {
   try {

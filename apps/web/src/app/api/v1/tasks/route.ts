@@ -9,6 +9,9 @@ import { TaskStatus, TaskType } from '@prisma/client'
 // 确保 Worker 在服务端启动
 import '@/lib/queue/initWorker'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/tasks - 获取任务列表
 export async function GET(request: NextRequest) {
   try {

@@ -4,6 +4,9 @@ import { getSession } from '@/lib/auth'
 import { success, unauthorized, notFound, badRequest, internalError } from '@/lib/api'
 import { getQueuedTaskStatus, removeFromQueue, requestStop } from '@/lib/queue'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = {
   params: Promise<{ id: string }>
 }

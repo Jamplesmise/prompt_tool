@@ -4,6 +4,9 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, notFound, forbidden } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 // GET /api/v1/teams/[id] - 获取团队详情

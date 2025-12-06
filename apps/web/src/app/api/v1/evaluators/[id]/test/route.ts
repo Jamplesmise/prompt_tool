@@ -16,6 +16,9 @@ import {
 import { executeInSandbox, type CodeLanguage } from '@/lib/sandbox'
 import { invokeModel, type ModelConfig } from '@/lib/modelInvoker'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = { params: Promise<{ id: string }> }
 
 type CodeConfig = {

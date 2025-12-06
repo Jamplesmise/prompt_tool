@@ -3,6 +3,9 @@ import { getSession } from '@/lib/auth'
 import { unauthorized, badRequest } from '@/lib/api'
 import * as XLSX from 'xlsx'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = { params: Promise<{ type: string }> }
 
 // GET /api/v1/datasets/templates/:type - 下载模板

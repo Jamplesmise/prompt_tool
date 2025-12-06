@@ -20,20 +20,41 @@ export type TaskJobResult = {
 // 队列名称
 export const TASK_QUEUE_NAME = 'task-execution'
 
-// 创建任务队列
-export const taskQueue = new Queue<TaskJobData, TaskJobResult>(TASK_QUEUE_NAME, {
-  connection: redis,
-  defaultJobOptions: {
-    removeOnComplete: 100,  // 保留最近 100 个完成的任务
-    removeOnFail: 100,      // 保留最近 100 个失败的任务
-    attempts: 1,            // 默认不重试（任务内部有重试机制）
-  },
-})
+// 使用全局变量缓存队列实例（避免热重载时重复创建）
+const globalForQueue = globalThis as unknown as {
+  taskQueue: Queue<TaskJobData, TaskJobResult> | undefined
+  taskQueueEvents: QueueEvents | undefined
+}
 
-// 队列事件监听（可选，用于日志）
-export const taskQueueEvents = new QueueEvents(TASK_QUEUE_NAME, {
-  connection: redis,
-})
+/**
+ * 获取任务队列（延迟初始化）
+ * 采用 FastGPT 的模式：调用时才创建连接，避免构建时连接 Redis
+ */
+export function getTaskQueue(): Queue<TaskJobData, TaskJobResult> {
+  if (!globalForQueue.taskQueue) {
+    globalForQueue.taskQueue = new Queue<TaskJobData, TaskJobResult>(TASK_QUEUE_NAME, {
+      connection: redis,
+      defaultJobOptions: {
+        removeOnComplete: 100,  // 保留最近 100 个完成的任务
+        removeOnFail: 100,      // 保留最近 100 个失败的任务
+        attempts: 1,            // 默认不重试（任务内部有重试机制）
+      },
+    })
+  }
+  return globalForQueue.taskQueue
+}
+
+/**
+ * 获取队列事件监听器（延迟初始化）
+ */
+export function getTaskQueueEvents(): QueueEvents {
+  if (!globalForQueue.taskQueueEvents) {
+    globalForQueue.taskQueueEvents = new QueueEvents(TASK_QUEUE_NAME, {
+      connection: redis,
+    })
+  }
+  return globalForQueue.taskQueueEvents
+}
 
 /**
  * 将任务加入队列
@@ -45,7 +66,8 @@ export async function enqueueTask(
     resumeFrom?: string
   }
 ): Promise<string> {
-  const job = await taskQueue.add(
+  const queue = getTaskQueue()
+  const job = await queue.add(
     'execute',
     {
       taskId,
@@ -70,7 +92,8 @@ export async function getQueuedTaskStatus(taskId: string): Promise<{
   progress?: number
   position?: number
 }> {
-  const job = await taskQueue.getJob(taskId)
+  const queue = getTaskQueue()
+  const job = await queue.getJob(taskId)
 
   if (!job) {
     return { exists: false }
@@ -82,8 +105,8 @@ export async function getQueuedTaskStatus(taskId: string): Promise<{
   // 获取在队列中的位置
   let position: number | undefined
   if (state === 'waiting' || state === 'prioritized') {
-    const waitingJobs = await taskQueue.getWaiting()
-    const index = waitingJobs.findIndex(j => j.id === taskId)
+    const waitingJobs = await queue.getWaiting()
+    const index = waitingJobs.findIndex((j) => j.id === taskId)
     position = index >= 0 ? index + 1 : undefined
   }
 
@@ -99,7 +122,8 @@ export async function getQueuedTaskStatus(taskId: string): Promise<{
  * 从队列移除任务
  */
 export async function removeFromQueue(taskId: string): Promise<boolean> {
-  const job = await taskQueue.getJob(taskId)
+  const queue = getTaskQueue()
+  const job = await queue.getJob(taskId)
   if (!job) {
     return false
   }
@@ -124,12 +148,13 @@ export async function getQueueStats(): Promise<{
   failed: number
   delayed: number
 }> {
+  const queue = getTaskQueue()
   const [waiting, active, completed, failed, delayed] = await Promise.all([
-    taskQueue.getWaitingCount(),
-    taskQueue.getActiveCount(),
-    taskQueue.getCompletedCount(),
-    taskQueue.getFailedCount(),
-    taskQueue.getDelayedCount(),
+    queue.getWaitingCount(),
+    queue.getActiveCount(),
+    queue.getCompletedCount(),
+    queue.getFailedCount(),
+    queue.getDelayedCount(),
   ])
 
   return { waiting, active, completed, failed, delayed }
@@ -139,19 +164,22 @@ export async function getQueueStats(): Promise<{
  * 暂停队列
  */
 export async function pauseQueue(): Promise<void> {
-  await taskQueue.pause()
+  const queue = getTaskQueue()
+  await queue.pause()
 }
 
 /**
  * 恢复队列
  */
 export async function resumeQueue(): Promise<void> {
-  await taskQueue.resume()
+  const queue = getTaskQueue()
+  await queue.resume()
 }
 
 /**
  * 清空队列
  */
 export async function clearQueue(): Promise<void> {
-  await taskQueue.obliterate({ force: true })
+  const queue = getTaskQueue()
+  await queue.obliterate({ force: true })
 }

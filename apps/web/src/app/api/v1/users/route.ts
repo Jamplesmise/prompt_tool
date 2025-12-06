@@ -5,6 +5,9 @@ import { success, error, unauthorized, forbidden } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 import type { UserRole } from '@prisma/client'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // 获取用户列表（管理员）
 export async function GET(request: NextRequest) {
   try {

@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { success, error, unauthorized, forbidden, notFound, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 type RouteParams = {
   params: Promise<{ id: string }>
 }

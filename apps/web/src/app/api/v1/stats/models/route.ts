@@ -4,6 +4,9 @@ import { success, unauthorized, badRequest, internalError } from '@/lib/api'
 import { getModelPerformance } from '@/lib/metrics/aggregator'
 import type { TimeRange } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // GET /api/v1/stats/models - 获取模型性能数据
 export async function GET(request: NextRequest) {
   try {

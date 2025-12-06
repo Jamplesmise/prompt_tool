@@ -6,6 +6,9 @@ import { prisma } from '@/lib/prisma'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
 
+// 强制动态渲染，避免构建时预渲染错误
+export const dynamic = 'force-dynamic'
+
 // 允许的图片类型
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 const MAX_FILE_SIZE = 2 * 1024 * 1024 // 2MB
