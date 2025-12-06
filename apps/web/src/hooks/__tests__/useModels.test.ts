@@ -67,7 +67,7 @@ describe('useModels hooks', () => {
       vi.mocked(modelsService.providers.list).mockResolvedValue({
         code: 200,
         message: 'success',
-        data: mockProviders,
+        data: { list: mockProviders, total: 2 },
       })
 
       const { result } = renderHook(() => useProviders(), {
@@ -162,7 +162,7 @@ describe('useModels hooks', () => {
       vi.mocked(modelsService.models.list).mockResolvedValue({
         code: 200,
         message: 'success',
-        data: mockModels,
+        data: { list: mockModels, total: 2 },
       })
 
       const { result } = renderHook(() => useModels(), {

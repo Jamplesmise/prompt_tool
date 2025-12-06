@@ -61,7 +61,7 @@ describe('useEvaluators hooks', () => {
       vi.mocked(evaluatorsService.list).mockResolvedValue({
         code: 200,
         message: 'success',
-        data: mockEvaluators,
+        data: { list: mockEvaluators, total: 2 },
       })
 
       const { result } = renderHook(() => useEvaluators(), {
@@ -79,10 +79,10 @@ describe('useEvaluators hooks', () => {
       vi.mocked(evaluatorsService.list).mockResolvedValue({
         code: 200,
         message: 'success',
-        data: [],
+        data: { list: [], total: 0 },
       })
 
-      const { result } = renderHook(() => useEvaluators('CODE'), {
+      const { result } = renderHook(() => useEvaluators('code'), {
         wrapper: createWrapper(),
       })
 
@@ -90,7 +90,7 @@ describe('useEvaluators hooks', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      expect(evaluatorsService.list).toHaveBeenCalledWith('CODE')
+      expect(evaluatorsService.list).toHaveBeenCalledWith('code')
     })
   })
 
