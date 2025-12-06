@@ -100,11 +100,17 @@ type UpdateModelInput = {
   isActive?: boolean
 }
 
+// 列表响应格式
+type ListResponse<T> = {
+  list: T[]
+  total: number
+}
+
 export const modelsService = {
   // 提供商 API
   providers: {
     // 获取所有提供商
-    async list(): Promise<ApiResponse<ProviderWithModels[]>> {
+    async list(): Promise<ApiResponse<ListResponse<ProviderWithModels>>> {
       const response = await fetch(`${API_BASE}/providers`)
       return response.json()
     },
@@ -165,7 +171,7 @@ export const modelsService = {
   // 模型 API
   models: {
     // 获取所有模型（扁平列表）
-    async list(): Promise<ApiResponse<ModelWithProvider[]>> {
+    async list(): Promise<ApiResponse<ListResponse<ModelWithProvider>>> {
       const response = await fetch(`${API_BASE}/models`)
       return response.json()
     },

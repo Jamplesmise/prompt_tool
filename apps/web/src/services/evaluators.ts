@@ -95,9 +95,15 @@ type TestEvaluatorResult = {
   details?: Record<string, unknown>
 }
 
+// 列表响应格式
+type ListResponse<T> = {
+  list: T[]
+  total: number
+}
+
 export const evaluatorsService = {
   // 获取评估器列表
-  async list(type?: EvaluatorType): Promise<ApiResponse<EvaluatorListItem[]>> {
+  async list(type?: EvaluatorType): Promise<ApiResponse<ListResponse<EvaluatorListItem>>> {
     const params = type ? `?type=${type}` : ''
     const response = await fetch(`${API_BASE}/evaluators${params}`)
     return response.json()

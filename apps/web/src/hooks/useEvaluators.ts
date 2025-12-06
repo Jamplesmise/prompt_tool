@@ -23,7 +23,7 @@ export function useEvaluators(type?: EvaluatorType) {
       if (response.code !== 200) {
         throw new Error(response.message)
       }
-      return response.data
+      return response.data.list
     },
   })
 }
