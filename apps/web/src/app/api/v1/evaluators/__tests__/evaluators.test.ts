@@ -119,7 +119,7 @@ describe('评估器 API 集成测试', () => {
       expect(data.message).toContain('名称')
     })
 
-    it('非 code 类型应返回 400', async () => {
+    it('LLM 类型缺少 modelId 应返回 400', async () => {
       vi.mocked(getSession).mockResolvedValue(mockSession)
 
       const request = new Request('http://localhost/api/v1/evaluators', {
@@ -131,7 +131,7 @@ describe('评估器 API 集成测试', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.message).toContain('code')
+      expect(data.message).toContain('LLM 评估器必须指定模型')
     })
 
     it('代码语法错误应返回 400', async () => {
