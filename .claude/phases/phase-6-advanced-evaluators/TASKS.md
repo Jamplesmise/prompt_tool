@@ -30,7 +30,7 @@ apps/web/src/lib/
 - [x] Node.js 代码执行正常（本地 VM）
 - [x] Python 代码执行正常（远程沙箱）
 - [x] 超时正确配置
-- [x] 云端沙箱 (https://REDACTED_SANDBOX_HOST) 测试通过
+- [x] 云端沙箱测试通过
 
 ---
 

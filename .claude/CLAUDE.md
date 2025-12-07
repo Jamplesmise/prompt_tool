@@ -45,6 +45,50 @@ pnpm lint           # 代码检查
 - **长时间命令处理**：当命令执行超过 30 秒未完成时，应中止操作并将命令交给用户在命令行手动执行
 - **网络依赖命令**：`pnpm install`、`npm install` 等网络依赖命令，直接提供给用户执行，不在 AI 会话中运行
 
+## ⚠️ 安全规范（重要）
+
+> **教训记录**：2025-12-07 发生敏感信息泄露事件，需使用 `git-filter-repo` 清理 Git 历史
+
+### 禁止提交的敏感信息
+
+以下内容 **绝对禁止** 出现在代码、文档、测试文件中：
+
+| 类型 | 示例 | 正确做法 |
+|------|------|----------|
+| 数据库密码 | `postgres:password123@` | 使用环境变量 `${DATABASE_URL}` |
+| API 密钥 | `sk-xxxx`, `token-xxxx` | 使用环境变量 `${API_KEY}` |
+| 服务器地址 | `xxx.sealosbja.site` | 使用占位符 `localhost` 或 `example.com` |
+| 端口号（生产） | `:31402`, `:47460` | 使用默认端口 `:5432`, `:27017` |
+| 加密密钥 | 32位真实密钥 | 使用示例值 `your-secret-key-here` |
+
+### 安全检查清单
+
+创建或修改文件时，必须检查：
+
+1. **`.env.example`** - 只包含占位符，不含真实凭据
+2. **`.env.test`** - 使用 `localhost` 和示例密码
+3. **测试文件** - 不含真实服务地址或凭据
+4. **文档/TASKS.md** - 不含生产环境 URL
+5. **临时调试文件** - 用完立即删除，不要提交
+
+### 提交前检查命令
+
+```bash
+# 检查是否有敏感信息
+git diff --cached | grep -E "(password|secret|token|api.?key|:.*@.*\.site)"
+
+# 如果发现泄露，使用 git-filter-repo 清理历史
+pip install git-filter-repo
+git filter-repo --replace-text /tmp/replacements.txt --force
+```
+
+### 泄露后处理流程
+
+1. **立即轮换** 所有已泄露的密码和密钥
+2. **清理历史** 使用 `git-filter-repo` 重写提交历史
+3. **强制推送** `git push --force --all`
+4. **通知团队** 确保所有人重新 clone 仓库
+
 ## 开发规范
 
 ### 命名
