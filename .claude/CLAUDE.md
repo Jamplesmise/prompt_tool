@@ -123,6 +123,12 @@ chore: 杂项
 |------|--------|------|------|
 | Phase 10 | `.claude/phases/phase-10-version-management/` | 版本管理增强：提示词分支管理 + 数据集版本管理 | ✅ |
 
+### V4 阶段（Phase 11）🚧 进行中
+
+| 阶段 | 文件夹 | 内容 | 状态 |
+|------|--------|------|------|
+| Phase 11 | `.claude/phases/phase-11-model-integration/` | FastGPT 模型集成 + 前端优化 | 🚧 |
+
 ### 部署与状态文档
 
 | 文档 | 内容 |
@@ -177,6 +183,13 @@ chore: 杂项
 **V3（Phase 10）**：✅ 已完成
 - 提示词分支管理（实验分支）
 - 数据集版本管理（快照、回滚、Diff）
+
+**V4（Phase 11）**：🚧 进行中
+- FastGPT 模型配置集成（MongoDB 直连）
+- 模型管理前端优化（参考 FastGPT UI）
+- 多模型类型支持（LLM/Embedding/TTS/STT/Rerank）
+- JSON 批量配置导入导出
+- 默认模型设置
 
 ## 快速开始新功能
 

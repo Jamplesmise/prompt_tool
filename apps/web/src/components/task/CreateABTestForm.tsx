@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Form,
@@ -25,6 +25,8 @@ import { useModels } from '@/hooks/useModels'
 import { useDatasets } from '@/hooks/useDatasets'
 import { useEvaluators } from '@/hooks/useEvaluators'
 import { useCreateABTest } from '@/hooks/useTasks'
+import { SimpleModelSelector } from '@/components/common'
+import type { UnifiedModel } from '@/services/models'
 import type { CreateABTestInput } from '@/services/tasks'
 
 const { Title, Text } = Typography
@@ -70,6 +72,21 @@ export function CreateABTestForm() {
   }, [currentStep, refetchDatasets])
 
   const createABTest = useCreateABTest()
+
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return (modelsData || [])
+      .filter(m => m.isActive)
+      .map(m => ({
+        id: m.id,
+        name: m.name,
+        provider: m.provider.name,
+        type: 'llm',
+        isActive: true,
+        isCustom: true,
+        source: 'local' as const,
+      }))
+  }, [modelsData])
 
   // 提示词版本
   const [promptVersions, setPromptVersions] = useState<
@@ -248,20 +265,11 @@ export function CreateABTestForm() {
                   label="模型"
                   rules={[{ required: true, message: '请选择模型' }]}
                 >
-                  <Select
+                  <SimpleModelSelector
+                    models={unifiedModels}
                     placeholder="选择模型"
                     disabled={compareType === 'prompt' && !!formValues?.modelIdB}
-                    onChange={(val) => {
-                      if (compareType === 'prompt') {
-                        form.setFieldValue('modelIdB', val)
-                      }
-                    }}
-                    options={modelsData
-                      ?.filter((m) => m.isActive)
-                      ?.map((m) => ({
-                        value: m.id,
-                        label: `${m.name} (${m.provider.name})`,
-                      }))}
+                    loading={modelsLoading}
                   />
                 </Form.Item>
               </Col>
@@ -310,15 +318,11 @@ export function CreateABTestForm() {
                   label="模型"
                   rules={[{ required: true, message: '请选择模型' }]}
                 >
-                  <Select
+                  <SimpleModelSelector
+                    models={unifiedModels}
                     placeholder="选择模型"
                     disabled={compareType === 'prompt'}
-                    options={modelsData
-                      ?.filter((m) => m.isActive)
-                      ?.map((m) => ({
-                        value: m.id,
-                        label: `${m.name} (${m.provider.name})`,
-                      }))}
+                    loading={modelsLoading}
                   />
                 </Form.Item>
               </Col>

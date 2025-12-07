@@ -1,8 +1,11 @@
 'use client'
 
+import { useMemo } from 'react'
 import { Form, Select, InputNumber, Alert, Typography, Space } from 'antd'
 import { CodeEditor } from './CodeEditor'
 import { DEFAULT_EVALUATION_PROMPT, SIMPLE_SCORING_PROMPT, COMPARISON_PROMPT } from '@platform/evaluators'
+import { SimpleModelSelector } from '@/components/common'
+import type { UnifiedModel } from '@/services/models'
 
 const { Text } = Typography
 
@@ -10,6 +13,7 @@ type Model = {
   id: string
   name: string
   modelId: string
+  provider?: { name: string }
 }
 
 type LLMConfigProps = {
@@ -49,6 +53,19 @@ export function LLMConfig({ models, loading = false }: LLMConfigProps) {
   const form = Form.useFormInstance()
   const selectedTemplate = Form.useWatch('promptTemplate', form)
 
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return models.map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider?.name || 'Unknown',
+      type: 'llm',
+      isActive: true,
+      isCustom: true,
+      source: 'local' as const,
+    }))
+  }, [models])
+
   const handleTemplateChange = (templateKey: string) => {
     const template = PROMPT_TEMPLATES.find((t) => t.key === templateKey)
     if (template && template.key !== 'custom') {
@@ -72,20 +89,10 @@ export function LLMConfig({ models, loading = false }: LLMConfigProps) {
         rules={[{ required: true, message: '请选择评估模型' }]}
         extra="选择用于评估的 LLM 模型"
       >
-        <Select
+        <SimpleModelSelector
+          models={unifiedModels}
           placeholder="选择模型"
           loading={loading}
-          options={models.map((m) => ({
-            value: m.id,
-            label: (
-              <Space>
-                <span>{m.name}</span>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  {m.modelId}
-                </Text>
-              </Space>
-            ),
-          }))}
         />
       </Form.Item>
 

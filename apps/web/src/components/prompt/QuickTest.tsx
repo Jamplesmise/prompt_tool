@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, Form, Select, Input, Button, Space, Typography, Spin, Statistic, Row, Col } from 'antd'
+import { useState, useMemo } from 'react'
+import { Card, Form, Input, Button, Typography, Spin, Statistic, Row, Col } from 'antd'
 import { PlayCircleOutlined, LoadingOutlined } from '@ant-design/icons'
 import type { PromptVariable } from '@platform/shared'
 import type { TestPromptResult } from '@/services/prompts'
+import { SimpleModelSelector } from '@/components/common'
+import type { UnifiedModel } from '@/services/models'
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -25,6 +27,19 @@ export function QuickTest({
   const [form] = Form.useForm()
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<TestPromptResult | null>(null)
+
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return models.map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider.name,
+      type: 'llm',
+      isActive: true,
+      isCustom: true,
+      source: 'local' as const,
+    }))
+  }, [models])
 
   const handleTest = async () => {
     try {
@@ -55,13 +70,10 @@ export function QuickTest({
           label="选择模型"
           rules={[{ required: true, message: '请选择模型' }]}
         >
-          <Select
+          <SimpleModelSelector
+            models={unifiedModels}
             placeholder="选择测试模型"
             loading={modelsLoading}
-            options={models.map((m) => ({
-              value: m.id,
-              label: `${m.name} (${m.provider.name})`,
-            }))}
           />
         </Form.Item>
 

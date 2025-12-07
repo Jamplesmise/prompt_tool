@@ -11,3 +11,10 @@ export { ProviderGroup } from './ProviderGroup'
 export type { ProviderGroupProps, ProviderModelInfo } from './ProviderGroup'
 export { TestResultModal } from './TestResultModal'
 export type { TestResult, TestResultModalProps } from './TestResultModal'
+
+// Phase 11 新增组件
+export { ModelTypeTag } from './ModelTypeTag'
+export { ModelCapabilityTags } from './ModelCapabilityTags'
+export { ModelPriceDisplay } from './ModelPriceDisplay'
+export { ProviderAvatar } from './ProviderAvatar'
+export { ModelSourceTag } from './ModelSourceTag'

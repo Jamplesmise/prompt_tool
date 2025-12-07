@@ -32,3 +32,6 @@ export type { FormFieldProps } from './FormField'
 
 export { FormSection } from './FormSection'
 export type { FormSectionProps } from './FormSection'
+
+// 模型选择器（供应商分组 + 搜索）
+export { ModelSelector, SimpleModelSelector } from './ModelSelector'
