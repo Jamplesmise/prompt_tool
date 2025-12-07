@@ -20,13 +20,15 @@ import {
 import type { MenuProps } from 'antd'
 import { FileTextOutlined, SaveOutlined, DownOutlined } from '@ant-design/icons'
 import { usePrompts } from '@/hooks/usePrompts'
-import { useModels } from '@/hooks/useModels'
+import { useModels, useUnifiedModels } from '@/hooks/useModels'
 import { useDatasets } from '@/hooks/useDatasets'
 import { useEvaluators } from '@/hooks/useEvaluators'
 import { useCreateTask } from '@/hooks/useTasks'
+import type { UnifiedModel } from '@/services/models'
 import { EvaluatorRecommendHint } from '@/components/analysis/EvaluatorRecommend'
 import { extractPromptFeatures, extractDatasetFeaturesFromColumns, matchEvaluators } from '@/lib/recommendation'
 import { SaveTemplateModal, TemplateSelector } from '@/components/templates'
+import { ModelSelector } from '@/components/common'
 import type { TemplateConfig } from '@/hooks/useTemplates'
 import type { MatchResult } from '@/lib/recommendation'
 import type { CreateTaskInput } from '@/services/tasks'
@@ -58,8 +60,46 @@ export function CreateTaskForm() {
   // 加载选项数据
   const { data: promptsData, isLoading: promptsLoading } = usePrompts({ pageSize: 100 })
   const { data: modelsData, isLoading: modelsLoading } = useModels()
+  const { data: unifiedModelsData, isLoading: unifiedModelsLoading } = useUnifiedModels()
   const { data: datasetsData, isLoading: datasetsLoading, refetch: refetchDatasets } = useDatasets({ pageSize: 100 })
   const { data: evaluatorsData, isLoading: evaluatorsLoading } = useEvaluators()
+
+  // 合并本地和 FastGPT 模型用于选择
+  const allModels = useMemo(() => {
+    const models: Array<UnifiedModel & { displayLabel: string }> = []
+
+    // 本地模型
+    if (modelsData) {
+      for (const m of modelsData) {
+        if (m.isActive) {
+          models.push({
+            id: m.id,
+            name: m.name,
+            provider: m.provider.name,
+            type: 'llm',
+            isActive: true,
+            isCustom: true,
+            source: 'local',
+            displayLabel: `${m.name} (${m.provider.name})`,
+          })
+        }
+      }
+    }
+
+    // FastGPT 模型（仅 LLM 类型）
+    if (unifiedModelsData?.models) {
+      for (const m of unifiedModelsData.models) {
+        if (m.source === 'fastgpt' && m.type === 'llm' && m.isActive) {
+          models.push({
+            ...m,
+            displayLabel: `${m.name} (${m.provider}) [FastGPT]`,
+          })
+        }
+      }
+    }
+
+    return models
+  }, [modelsData, unifiedModelsData])
 
   // 进入第二步时刷新数据集列表，确保获取最新的 rowCount
   useEffect(() => {
@@ -295,13 +335,46 @@ export function CreateTaskForm() {
         return
       }
 
+      // 分离本地模型和 FastGPT 模型
+      const localModelIds: string[] = []
+      const fastgptModels: Array<{
+        id: string
+        modelId: string
+        name: string
+        provider: string
+        inputPrice?: number
+        outputPrice?: number
+        maxContext?: number
+        maxResponse?: number
+      }> = []
+
+      for (const modelId of values.modelIds) {
+        const model = allModels.find((m) => m.id === modelId)
+        if (model) {
+          if (model.source === 'local') {
+            localModelIds.push(modelId)
+          } else if (model.source === 'fastgpt') {
+            fastgptModels.push({
+              id: model.id,
+              modelId: model.id, // FastGPT 模型的 id 就是 modelId
+              name: model.name,
+              provider: model.provider,
+              inputPrice: model.inputPrice,
+              outputPrice: model.outputPrice,
+              maxContext: model.maxContext,
+              maxResponse: model.maxResponse,
+            })
+          }
+        }
+      }
+
       const input: CreateTaskInput = {
         name: values.name,
         description: values.description,
         config: {
           promptIds: values.promptSelections.map((s: { promptId: string }) => s.promptId),
           promptVersionIds: values.promptSelections.map((s: { versionId: string }) => s.versionId),
-          modelIds: values.modelIds,
+          modelIds: localModelIds, // 只传本地模型 ID
           datasetId: values.datasetId,
           evaluatorIds: values.evaluatorIds,
           execution: {
@@ -309,6 +382,8 @@ export function CreateTaskForm() {
             timeoutSeconds: values.timeoutSeconds || 30,
             retryCount: values.retryCount || 3,
           },
+          // FastGPT 模型配置存入 config
+          fastgptModels: fastgptModels.length > 0 ? fastgptModels : undefined,
         },
       }
       console.log('Task input:', input)
@@ -411,16 +486,14 @@ export function CreateTaskForm() {
               name="modelIds"
               label="选择模型"
               rules={[{ required: true, message: '请选择模型' }]}
+              extra={unifiedModelsData?.fastgptEnabled ? '支持本地模型和 FastGPT 模型' : undefined}
             >
-              <Select
-                mode="multiple"
+              <ModelSelector
+                models={allModels}
+                multiple
                 placeholder="选择要测试的模型"
-                options={modelsData
-                  ?.filter((m) => m.isActive)
-                  ?.map((m) => ({
-                    value: m.id,
-                    label: `${m.name} (${m.provider.name})`,
-                  }))}
+                loading={modelsLoading || unifiedModelsLoading}
+                filterType="llm"
                 style={{ width: '100%' }}
               />
             </Form.Item>

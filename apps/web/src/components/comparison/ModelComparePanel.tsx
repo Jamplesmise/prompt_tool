@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, Select, Space, Button, Spin, Empty, Steps, Divider, Typography, Alert, Row, Col } from 'antd'
+import { Card, Select, Space, Button, Spin, Steps, Divider, Typography, Alert } from 'antd'
 import {
   FileTextOutlined,
   DatabaseOutlined,
@@ -12,7 +12,9 @@ import {
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { ModelCompareTable } from './ModelCompareTable'
 import { ModelRecommendation } from './ModelRecommendation'
-import type { ModelComparisonResult, ModelComparisonData } from '@/services/comparisonService'
+import { ModelSelector } from '@/components/common'
+import type { ModelComparisonResult } from '@/services/comparisonService'
+import type { UnifiedModel } from '@/services/models'
 
 const { Text, Title } = Typography
 
@@ -135,6 +137,19 @@ export function ModelComparePanel({ initialPromptId, initialDatasetId }: ModelCo
     queryKey: ['models'],
     queryFn: fetchModels,
   })
+
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return models.map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider.name,
+      type: 'llm',
+      isActive: true,
+      isCustom: true,
+      source: 'local' as const,
+    }))
+  }, [models])
 
   // 运行对比
   const comparisonMutation = useMutation({
@@ -267,17 +282,14 @@ export function ModelComparePanel({ initialPromptId, initialDatasetId }: ModelCo
           <div style={{ marginBottom: 16 }}>
             <Text type="secondary">选择要对比的模型（至少 2 个）：</Text>
           </div>
-          <Select
-            mode="multiple"
-            style={{ width: '100%' }}
+          <ModelSelector
+            models={unifiedModels}
+            multiple
+            value={selectedModelIds}
+            onChange={(val) => setSelectedModelIds(val as string[])}
             placeholder="选择模型"
             loading={modelsLoading}
-            value={selectedModelIds}
-            onChange={setSelectedModelIds}
-            options={models.map(m => ({
-              value: m.id,
-              label: `${m.name} (${m.provider.name})`,
-            }))}
+            style={{ width: '100%' }}
           />
           {selectedModelIds.length > 0 && selectedModelIds.length < 2 && (
             <Alert

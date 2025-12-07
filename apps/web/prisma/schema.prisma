@@ -311,6 +311,60 @@ model Model {
   @@map("models")
 }
 
+// Phase 11: FastGPT 同步模型
+// 从 FastGPT MongoDB 定期同步的模型配置，支持离线使用
+model SyncedModel {
+  id       String          @id @default(uuid())
+  modelId  String          @unique @map("model_id") // FastGPT 的 model 字段，如 "gpt-4o"
+  name     String
+  provider String          // 提供商名称，如 "OpenAI"
+  type     SyncedModelType // 模型类型
+
+  // 定价（每千 tokens）
+  inputPrice  Float? @map("input_price")
+  outputPrice Float? @map("output_price")
+
+  // LLM 特有配置
+  maxContext  Int?     @map("max_context")
+  maxResponse Int?     @map("max_response")
+  vision      Boolean  @default(false)
+  toolChoice  Boolean  @default(false) @map("tool_choice")
+  functionCall Boolean @default(false) @map("function_call")
+  reasoning   Boolean  @default(false)
+
+  // Embedding 特有配置
+  maxToken     Int? @map("max_token")
+  defaultToken Int? @map("default_token")
+
+  // TTS 特有配置
+  voices Json? // 声音列表
+
+  // 状态
+  isActive Boolean @default(true) @map("is_active")
+  isCustom Boolean @default(false) @map("is_custom")
+
+  // 原始数据（完整的 FastGPT 配置）
+  rawConfig Json @default("{}") @map("raw_config")
+
+  // 同步元数据
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([provider])
+  @@index([isActive])
+  @@map("synced_models")
+}
+
+enum SyncedModelType {
+  llm
+  embedding
+  tts
+  stt
+  rerank
+}
+
 // ============================================
 // 评估器模块
 // ============================================

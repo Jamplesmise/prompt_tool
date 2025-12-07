@@ -195,6 +195,54 @@ export class TaskExecutor {
 
     const versionMap = new Map(promptVersions.map((v) => [v.id, v]))
 
+    // 本地模型
+    const localModels: ModelConfig[] = task.models.map((tm) => ({
+      id: tm.model.id,
+      modelId: tm.model.modelId,
+      provider: {
+        type: tm.model.provider.type,
+        baseUrl: tm.model.provider.baseUrl,
+        apiKey: tm.model.provider.apiKey,
+        headers: tm.model.provider.headers as Record<string, string>,
+      },
+      config: tm.model.config as Record<string, unknown>,
+      pricing: tm.model.pricing as { inputPerMillion?: number; outputPerMillion?: number },
+      source: 'local' as const,
+    }))
+
+    // FastGPT 模型（从 config 中读取）
+    const taskConfig = task.config as TaskExecutionConfig & {
+      fastgptModels?: Array<{
+        id: string
+        modelId: string
+        name: string
+        provider: string
+        inputPrice?: number
+        outputPrice?: number
+        maxContext?: number
+        maxResponse?: number
+      }>
+    }
+    const fastgptModels: ModelConfig[] = (taskConfig.fastgptModels || []).map((fm) => ({
+      id: fm.id,
+      modelId: fm.modelId,
+      provider: {
+        type: 'openai', // OneHub 使用 OpenAI 兼容格式
+        baseUrl: '', // 不需要，FastGPT 模型通过 OneHub 调用
+        apiKey: '',
+        headers: {},
+      },
+      config: {
+        maxTokens: fm.maxResponse,
+        temperature: 0.7,
+      },
+      pricing: {
+        inputPerMillion: fm.inputPrice ? fm.inputPrice * 1000 : undefined,
+        outputPerMillion: fm.outputPrice ? fm.outputPrice * 1000 : undefined,
+      },
+      source: 'fastgpt' as const,
+    }))
+
     return {
       id: task.id,
       name: task.name,
@@ -205,18 +253,7 @@ export class TaskExecutor {
         promptVersionId: tp.promptVersionId,
         promptContent: versionMap.get(tp.promptVersionId)?.content ?? '',
       })),
-      models: task.models.map((tm) => ({
-        id: tm.model.id,
-        modelId: tm.model.modelId,
-        provider: {
-          type: tm.model.provider.type,
-          baseUrl: tm.model.provider.baseUrl,
-          apiKey: tm.model.provider.apiKey,
-          headers: tm.model.provider.headers as Record<string, string>,
-        },
-        config: tm.model.config as Record<string, unknown>,
-        pricing: tm.model.pricing as { inputPerMillion?: number; outputPerMillion?: number },
-      })),
+      models: [...localModels, ...fastgptModels],
       evaluators: task.evaluators.map((te) => ({
         id: te.evaluator.id,
         config: te.evaluator.config as EvaluatorConfig,

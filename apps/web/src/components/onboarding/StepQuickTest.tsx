@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Button, Card, Typography, Space, Alert, Spin, Form, Input, Select, Divider } from 'antd'
+import { Button, Card, Typography, Space, Alert, Spin, Form, Input, Divider } from 'antd'
 import { Play, CheckCircle, Clock, Zap } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useOnboardingStore } from '@/stores/onboardingStore'
 import { usePrompt, useTestPrompt } from '@/hooks/usePrompts'
 import { useModels } from '@/hooks/useModels'
 import { extractVariables } from '@/lib/template'
+import { SimpleModelSelector } from '@/components/common'
+import type { UnifiedModel } from '@/services/models'
 
 const { Text, Paragraph } = Typography
 const { TextArea } = Input
@@ -37,6 +39,19 @@ export function StepQuickTest() {
     if (!prompt?.content) return []
     return extractVariables(prompt.content)
   }, [prompt?.content])
+
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return (models || []).map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider.name,
+      type: 'llm',
+      isActive: m.isActive,
+      isCustom: true,
+      source: 'local' as const,
+    }))
+  }, [models])
 
   // 设置默认模型
   useEffect(() => {
@@ -136,13 +151,11 @@ export function StepQuickTest() {
           label="选择模型"
           rules={[{ required: true, message: '请选择模型' }]}
         >
-          <Select placeholder="选择要测试的模型">
-            {models.map((model) => (
-              <Select.Option key={model.id} value={model.id}>
-                {model.name}
-              </Select.Option>
-            ))}
-          </Select>
+          <SimpleModelSelector
+            models={unifiedModels}
+            placeholder="选择要测试的模型"
+            loading={modelsLoading}
+          />
         </Form.Item>
 
         {variables.length > 0 && (

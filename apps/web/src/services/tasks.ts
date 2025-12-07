@@ -87,6 +87,18 @@ type PaginatedResponse<T> = {
   pageSize: number
 }
 
+// FastGPT 模型配置（存储在任务 config 中）
+type FastGPTModelConfig = {
+  id: string
+  modelId: string
+  name: string
+  provider: string
+  inputPrice?: number
+  outputPrice?: number
+  maxContext?: number
+  maxResponse?: number
+}
+
 // 创建任务参数
 type CreateTaskInput = {
   name: string
@@ -94,7 +106,7 @@ type CreateTaskInput = {
   config: {
     promptIds: string[]
     promptVersionIds: string[]
-    modelIds: string[]
+    modelIds: string[] // 本地模型 ID
     datasetId: string
     evaluatorIds: string[]
     execution: {
@@ -102,6 +114,8 @@ type CreateTaskInput = {
       timeoutSeconds: number
       retryCount: number
     }
+    // FastGPT 模型配置
+    fastgptModels?: FastGPTModelConfig[]
   }
 }
 

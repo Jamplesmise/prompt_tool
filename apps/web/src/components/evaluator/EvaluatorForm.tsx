@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Form, Input, Button, Space, Select, InputNumber, Radio, Alert, Row, Col, Typography } from 'antd'
 import { SaveOutlined, InfoCircleOutlined, CodeOutlined, RobotOutlined, MergeCellsOutlined, AppstoreOutlined } from '@ant-design/icons'
-import { CodeEditor, FormSection } from '@/components/common'
+import { CodeEditor, FormSection, SimpleModelSelector } from '@/components/common'
 import { CODE_TEMPLATES, type CodeLanguage } from '@/lib/sandbox'
 import { DEFAULT_EVALUATION_PROMPT } from '@platform/evaluators'
 import type { PresetType } from '@platform/evaluators'
+import type { UnifiedModel } from '@/services/models'
 
 const { TextArea } = Input
 const { Text } = Typography
@@ -64,6 +65,7 @@ type Model = {
   id: string
   name: string
   modelId: string
+  provider?: { name: string }
 }
 
 type Evaluator = {
@@ -199,6 +201,19 @@ export function EvaluatorForm({
   const availableEvaluators = evaluators.filter(
     (e) => e.id !== currentId
   )
+
+  // 转换为 UnifiedModel 格式
+  const unifiedModels: UnifiedModel[] = useMemo(() => {
+    return models.map(m => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider?.name || 'Unknown',
+      type: 'llm',
+      isActive: true,
+      isCustom: true,
+      source: 'local' as const,
+    }))
+  }, [models])
 
   // 获取初始值
   const getInitialValues = () => {
@@ -445,12 +460,9 @@ export function EvaluatorForm({
             label="评估模型"
             rules={[{ required: true, message: '请选择评估模型' }]}
           >
-            <Select
+            <SimpleModelSelector
+              models={unifiedModels}
               placeholder="选择模型"
-              options={models.map((m) => ({
-                value: m.id,
-                label: `${m.name} (${m.modelId})`,
-              }))}
             />
           </Form.Item>
 

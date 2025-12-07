@@ -3,6 +3,10 @@
 import { decryptApiKey } from './encryption'
 import type { TokenUsage } from '@platform/shared'
 
+// OneHub 配置（用于 FastGPT 模型）
+const ONEHUB_BASE_URL = process.env.OPENAI_BASE_URL || ''
+const ONEHUB_API_KEY = process.env.CHAT_API_KEY || ''
+
 export type ModelConfig = {
   id: string
   modelId: string
@@ -18,6 +22,8 @@ export type ModelConfig = {
     outputPerMillion?: number
     currency?: 'USD' | 'CNY'
   }
+  // FastGPT 模型标识
+  source?: 'local' | 'fastgpt'
 }
 
 export type InvokeModelInput = {
@@ -44,6 +50,12 @@ export async function invokeModel(
   input: InvokeModelInput
 ): Promise<InvokeModelResult> {
   const startTime = Date.now()
+
+  // FastGPT 模型通过 OneHub 调用
+  if (model.source === 'fastgpt') {
+    return invokeFastGPTModel(model, input, startTime)
+  }
+
   const apiKey = decryptApiKey(model.provider.apiKey)
   const providerType = model.provider.type.toLowerCase()
 
@@ -205,6 +217,96 @@ function calculateCost(
 
   const inputCost = (tokens.input / 1000000) * (pricing.inputPerMillion ?? 0)
   const outputCost = (tokens.output / 1000000) * (pricing.outputPerMillion ?? 0)
+
+  return inputCost + outputCost
+}
+
+/**
+ * 通过 OneHub 调用 FastGPT 模型
+ */
+async function invokeFastGPTModel(
+  model: ModelConfig,
+  input: InvokeModelInput,
+  startTime: number
+): Promise<InvokeModelResult> {
+  if (!ONEHUB_BASE_URL || !ONEHUB_API_KEY) {
+    throw new ModelInvokeError(
+      'OneHub not configured. Please set OPENAI_BASE_URL and CHAT_API_KEY environment variables.',
+      500
+    )
+  }
+
+  const url = `${ONEHUB_BASE_URL}/chat/completions`
+  const modelConfig = model.config as Record<string, unknown>
+  const maxTokens = input.maxTokens ?? modelConfig.maxTokens ?? 2048
+  const temperature = input.temperature ?? modelConfig.temperature ?? 0.7
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${ONEHUB_API_KEY}`,
+  }
+
+  const body = {
+    model: model.modelId,
+    messages: input.messages,
+    max_tokens: maxTokens,
+    temperature,
+    ...(input.topP !== undefined ? { top_p: input.topP } : {}),
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  })
+
+  const latencyMs = Date.now() - startTime
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    const errorMessage =
+      errorData.error?.message ||
+      errorData.message ||
+      `HTTP ${response.status}: ${response.statusText}`
+    throw new ModelInvokeError(errorMessage, response.status)
+  }
+
+  const data = await response.json()
+
+  // 解析 OpenAI 兼容格式响应
+  const result = parseResponse('openai', data)
+
+  // 计算费用（使用 FastGPT 的定价）
+  const cost = calculateFastGPTCost(result.tokens, model)
+
+  return {
+    output: result.output,
+    tokens: result.tokens,
+    latencyMs,
+    cost,
+    costCurrency: 'CNY',
+    rawResponse: data,
+  }
+}
+
+/**
+ * 计算 FastGPT 模型费用
+ */
+function calculateFastGPTCost(
+  tokens: TokenUsage,
+  model: ModelConfig
+): number | null {
+  const pricing = model.pricing
+  if (!pricing) return null
+
+  // FastGPT 定价是每 1K tokens
+  const inputPrice = pricing.inputPerMillion ? pricing.inputPerMillion / 1000 : 0
+  const outputPrice = pricing.outputPerMillion ? pricing.outputPerMillion / 1000 : 0
+
+  if (!inputPrice && !outputPrice) return null
+
+  const inputCost = (tokens.input / 1000) * inputPrice
+  const outputCost = (tokens.output / 1000) * outputPrice
 
   return inputCost + outputCost
 }
