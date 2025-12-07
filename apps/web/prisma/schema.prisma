@@ -1,0 +1,927 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 用户模块
+// ============================================
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  avatar       String?
+  role         UserRole @default(USER)
+  settings     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  prompts        Prompt[]
+  promptVersions PromptVersion[]
+  datasets       Dataset[]
+  evaluators     Evaluator[]
+  tasks          Task[]
+
+  // Phase 8: 监控告警
+  scheduledTasks     ScheduledTask[]
+  alertRules         AlertRule[]
+  acknowledgedAlerts Alert[]         @relation("AlertAcknowledgedBy")
+  notifyChannels     NotifyChannel[]
+
+  // Phase 9: 团队管理
+  ownedTeams     Team[]       @relation("TeamOwner")
+  teamMembers    TeamMember[]
+  invitedMembers TeamMember[] @relation("InvitedBy")
+  apiTokens      ApiToken[]
+  auditLogs      AuditLog[]
+
+  // Phase 10: 版本管理
+  createdBranches PromptBranch[]   @relation("BranchCreatedBy")
+  mergedBranches  PromptBranch[]   @relation("BranchMergedBy")
+  datasetVersions DatasetVersion[]
+
+  // Phase 4: 任务模板
+  taskTemplates TaskTemplate[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+// ============================================
+// 提示词模块
+// ============================================
+
+model Prompt {
+  id             String   @id @default(uuid())
+  name           String
+  description    String?
+  systemPrompt   String?  @default("") @map("system_prompt")
+  content        String
+  variables      Json     @default("[]")
+  tags           String[] @default([])
+  currentVersion Int      @default(0) @map("current_version")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  versions PromptVersion[]
+  tasks    TaskPrompt[]
+
+  // Phase 10: 分支管理
+  branches PromptBranch[]
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([name])
+  @@map("prompts")
+}
+
+// Phase 10: 提示词分支
+model PromptBranch {
+  id       String @id @default(uuid())
+  promptId String @map("prompt_id")
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+
+  sourceVersionId String        @map("source_version_id")
+  sourceVersion   PromptVersion @relation("SourceVersion", fields: [sourceVersionId], references: [id])
+
+  currentVersion Int                @default(1) @map("current_version")
+  isDefault      Boolean            @default(false) @map("is_default")
+  status         PromptBranchStatus @default(ACTIVE)
+
+  mergedAt   DateTime? @map("merged_at")
+  mergedById String?   @map("merged_by_id")
+  mergedBy   User?     @relation("BranchMergedBy", fields: [mergedById], references: [id])
+  mergedToId String?   @map("merged_to_id")
+
+  versions PromptVersion[] @relation("BranchVersions")
+
+  createdById String   @map("created_by_id")
+  createdBy   User     @relation("BranchCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([promptId, name])
+  @@index([promptId])
+  @@index([status])
+  @@map("prompt_branches")
+}
+
+enum PromptBranchStatus {
+  ACTIVE
+  MERGED
+  ARCHIVED
+}
+
+model PromptVersion {
+  id       String @id @default(uuid())
+  promptId String @map("prompt_id")
+  prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  version      Int
+  systemPrompt String? @default("") @map("system_prompt")
+  content      String
+  variables    Json    @default("[]")
+  changeLog    String? @map("change_log")
+
+  // Phase 10: 分支关联
+  branchId String?       @map("branch_id")
+  branch   PromptBranch? @relation("BranchVersions", fields: [branchId], references: [id], onDelete: SetNull)
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  taskResults TaskResult[]
+
+  // 作为源版本创建的分支
+  derivedBranches PromptBranch[] @relation("SourceVersion")
+
+  @@unique([promptId, version])
+  @@unique([branchId, version])
+  @@index([promptId])
+  @@index([branchId])
+  @@map("prompt_versions")
+}
+
+// ============================================
+// 数据集模块
+// ============================================
+
+model Dataset {
+  id           String  @id @default(uuid())
+  name         String
+  description  String?
+  schema       Json?
+  rowCount     Int     @default(0) @map("row_count")
+  filePath     String? @map("file_path")
+  isPersistent Boolean @default(false) @map("is_persistent")
+
+  // Phase 10: 版本管理
+  currentVersion Int @default(0) @map("current_version")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  rows  DatasetRow[]
+  tasks Task[]
+
+  // Phase 10: 版本历史
+  versions DatasetVersion[]
+
+  @@index([createdById])
+  @@index([teamId])
+  @@map("datasets")
+}
+
+model DatasetRow {
+  id        String  @id @default(uuid())
+  datasetId String  @map("dataset_id")
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  rowIndex Int  @map("row_index")
+  data     Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taskResults TaskResult[]
+
+  @@unique([datasetId, rowIndex])
+  @@index([datasetId])
+  @@map("dataset_rows")
+}
+
+// Phase 10: 数据集版本
+model DatasetVersion {
+  id        String  @id @default(uuid())
+  datasetId String  @map("dataset_id")
+  dataset   Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  version   Int
+  rowCount  Int     @map("row_count")
+  changeLog String? @map("change_log")
+
+  // 快照元数据
+  columns   Json // string[]
+  rowHashes Json @map("row_hashes") // string[] - 用于快速对比
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // 关联的数据行快照
+  rows DatasetVersionRow[]
+
+  @@unique([datasetId, version])
+  @@index([datasetId])
+  @@map("dataset_versions")
+}
+
+model DatasetVersionRow {
+  id        String         @id @default(uuid())
+  versionId String         @map("version_id")
+  version   DatasetVersion @relation(fields: [versionId], references: [id], onDelete: Cascade)
+
+  rowIndex Int    @map("row_index")
+  data     Json
+  hash     String // 内容哈希，用于对比
+
+  @@index([versionId, rowIndex])
+  @@map("dataset_version_rows")
+}
+
+// ============================================
+// 模型配置模块
+// ============================================
+
+model Provider {
+  id       String       @id @default(uuid())
+  name     String
+  type     ProviderType
+  baseUrl  String       @map("base_url")
+  apiKey   String       @map("api_key")
+  headers  Json         @default("{}")
+  isActive Boolean      @default(true) @map("is_active")
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  models Model[]
+
+  @@index([teamId])
+  @@map("providers")
+}
+
+enum ProviderType {
+  OPENAI
+  ANTHROPIC
+  AZURE
+  CUSTOM
+}
+
+model Model {
+  id         String   @id @default(uuid())
+  providerId String   @map("provider_id")
+  provider   Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  name     String
+  modelId  String  @map("model_id")
+  config   Json    @default("{}")
+  pricing  Json    @default("{}")
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taskResults TaskResult[]
+  tasks       TaskModel[]
+
+  @@index([providerId])
+  @@map("models")
+}
+
+// Phase 11: FastGPT 同步模型
+// 从 FastGPT MongoDB 定期同步的模型配置，支持离线使用
+model SyncedModel {
+  id       String          @id @default(uuid())
+  modelId  String          @unique @map("model_id") // FastGPT 的 model 字段，如 "gpt-4o"
+  name     String
+  provider String          // 提供商名称，如 "OpenAI"
+  type     SyncedModelType // 模型类型
+
+  // 定价（每千 tokens）
+  inputPrice  Float? @map("input_price")
+  outputPrice Float? @map("output_price")
+
+  // LLM 特有配置
+  maxContext  Int?     @map("max_context")
+  maxResponse Int?     @map("max_response")
+  vision      Boolean  @default(false)
+  toolChoice  Boolean  @default(false) @map("tool_choice")
+  functionCall Boolean @default(false) @map("function_call")
+  reasoning   Boolean  @default(false)
+
+  // Embedding 特有配置
+  maxToken     Int? @map("max_token")
+  defaultToken Int? @map("default_token")
+
+  // TTS 特有配置
+  voices Json? // 声音列表
+
+  // 状态
+  isActive Boolean @default(true) @map("is_active")
+  isCustom Boolean @default(false) @map("is_custom")
+
+  // 原始数据（完整的 FastGPT 配置）
+  rawConfig Json @default("{}") @map("raw_config")
+
+  // 同步元数据
+  syncedAt  DateTime @default(now()) @map("synced_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([provider])
+  @@index([isActive])
+  @@map("synced_models")
+}
+
+enum SyncedModelType {
+  llm
+  embedding
+  tts
+  stt
+  rerank
+}
+
+// ============================================
+// 评估器模块
+// ============================================
+
+model Evaluator {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  type        EvaluatorType
+  config      Json
+  isPreset    Boolean       @default(false) @map("is_preset")
+
+  createdById String? @map("created_by_id")
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  evaluationResults EvaluationResult[]
+  tasks             TaskEvaluator[]
+
+  @@index([type])
+  @@index([teamId])
+  @@map("evaluators")
+}
+
+enum EvaluatorType {
+  PRESET
+  CODE
+  LLM
+  COMPOSITE
+}
+
+// ============================================
+// 任务模块
+// ============================================
+
+model Task {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  type        TaskType   @default(PROMPT)
+  status      TaskStatus @default(PENDING)
+  config      Json
+  progress    Json       @default("{\"total\": 0, \"completed\": 0, \"failed\": 0}")
+  stats       Json       @default("{}")
+  error       String?
+
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  datasetId String  @map("dataset_id")
+  dataset   Dataset @relation(fields: [datasetId], references: [id])
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  results    TaskResult[]
+  prompts    TaskPrompt[]
+  models     TaskModel[]
+  evaluators TaskEvaluator[]
+  abTest     ABTest?
+
+  // Phase 8: 定时任务关联
+  scheduledTaskTemplates ScheduledTask[]      @relation("ScheduledTaskTemplate")
+  scheduledExecutions    ScheduledExecution[] @relation("ScheduledExecutionTask")
+
+  @@index([status])
+  @@index([createdById])
+  @@index([teamId])
+  @@index([createdAt])
+  @@map("tasks")
+}
+
+enum TaskType {
+  PROMPT
+  AGENT
+  API
+  AB_TEST
+}
+
+enum TaskStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  STOPPED
+}
+
+model TaskPrompt {
+  id              String @id @default(uuid())
+  taskId          String @map("task_id")
+  task            Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  promptId        String @map("prompt_id")
+  prompt          Prompt @relation(fields: [promptId], references: [id])
+  promptVersionId String @map("prompt_version_id")
+
+  @@unique([taskId, promptId])
+  @@map("task_prompts")
+}
+
+model TaskModel {
+  id      String @id @default(uuid())
+  taskId  String @map("task_id")
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  modelId String @map("model_id")
+  model   Model  @relation(fields: [modelId], references: [id])
+
+  @@unique([taskId, modelId])
+  @@map("task_models")
+}
+
+model TaskEvaluator {
+  id          String    @id @default(uuid())
+  taskId      String    @map("task_id")
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  evaluatorId String    @map("evaluator_id")
+  evaluator   Evaluator @relation(fields: [evaluatorId], references: [id])
+
+  @@unique([taskId, evaluatorId])
+  @@map("task_evaluators")
+}
+
+// ============================================
+// 测试结果模块
+// ============================================
+
+model TaskResult {
+  id     String @id @default(uuid())
+  taskId String @map("task_id")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  datasetRowId String     @map("dataset_row_id")
+  datasetRow   DatasetRow @relation(fields: [datasetRowId], references: [id])
+
+  promptId        String        @map("prompt_id")
+  promptVersionId String        @map("prompt_version_id")
+  promptVersion   PromptVersion @relation(fields: [promptVersionId], references: [id])
+
+  modelId String @map("model_id")
+  model   Model  @relation(fields: [modelId], references: [id])
+
+  input    Json
+  output   String?
+  expected String?
+
+  latencyMs    Int?     @map("latency_ms")
+  tokens       Json     @default("{\"input\": 0, \"output\": 0, \"total\": 0}")
+  cost         Decimal? @db.Decimal(10, 6)
+  costCurrency String?  @default("USD") @map("cost_currency")
+
+  status ResultStatus @default(PENDING)
+  error  String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  evaluations EvaluationResult[]
+
+  @@index([taskId])
+  @@index([taskId, status])
+  @@map("task_results")
+}
+
+enum ResultStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  TIMEOUT
+  ERROR
+}
+
+model EvaluationResult {
+  id           String     @id @default(uuid())
+  taskResultId String     @map("task_result_id")
+  taskResult   TaskResult @relation(fields: [taskResultId], references: [id], onDelete: Cascade)
+
+  evaluatorId String    @map("evaluator_id")
+  evaluator   Evaluator @relation(fields: [evaluatorId], references: [id])
+
+  passed  Boolean
+  score   Decimal? @db.Decimal(5, 4)
+  reason  String?
+  details Json     @default("{}")
+
+  latencyMs Int? @map("latency_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskResultId])
+  @@map("evaluation_results")
+}
+
+// ============================================
+// A/B 测试模块
+// ============================================
+
+model ABTest {
+  id     String @id @default(uuid())
+  taskId String @unique @map("task_id")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  compareType String @map("compare_type") // 'prompt' | 'model'
+  configA     Json   @map("config_a") // { promptId, promptVersionId, modelId }
+  configB     Json   @map("config_b")
+
+  summary Json @default("{}") // { winsA, winsB, ties, pValue, significant }
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  results ABTestResult[]
+
+  @@map("ab_tests")
+}
+
+model ABTestResult {
+  id       String @id @default(uuid())
+  abTestId String @map("ab_test_id")
+  abTest   ABTest @relation(fields: [abTestId], references: [id], onDelete: Cascade)
+
+  rowIndex  Int     @map("row_index")
+  resultAId String  @map("result_a_id") // TaskResult ID for config A
+  resultBId String  @map("result_b_id") // TaskResult ID for config B
+  winner    String? // 'A' | 'B' | 'tie' | null
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([abTestId])
+  @@map("ab_test_results")
+}
+
+// ============================================
+// 定时任务模块
+// ============================================
+
+model ScheduledTask {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  taskTemplateId String @map("task_template_id")
+  taskTemplate   Task   @relation("ScheduledTaskTemplate", fields: [taskTemplateId], references: [id])
+
+  cronExpression String  @map("cron_expression")
+  timezone       String  @default("Asia/Shanghai")
+  isActive       Boolean @default(true) @map("is_active")
+
+  lastRunAt DateTime? @map("last_run_at")
+  nextRunAt DateTime? @map("next_run_at")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  executions ScheduledExecution[]
+
+  @@index([isActive])
+  @@index([nextRunAt])
+  @@index([createdById])
+  @@index([teamId])
+  @@map("scheduled_tasks")
+}
+
+model ScheduledExecution {
+  id              String        @id @default(uuid())
+  scheduledTaskId String        @map("scheduled_task_id")
+  scheduledTask   ScheduledTask @relation(fields: [scheduledTaskId], references: [id], onDelete: Cascade)
+
+  taskId String @map("task_id")
+  task   Task   @relation("ScheduledExecutionTask", fields: [taskId], references: [id])
+
+  status ScheduledExecutionStatus @default(PENDING)
+  error  String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([scheduledTaskId])
+  @@index([createdAt])
+  @@map("scheduled_executions")
+}
+
+enum ScheduledExecutionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+// ============================================
+// 告警模块
+// ============================================
+
+model AlertRule {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  metric    AlertMetric
+  condition AlertCondition
+  threshold Float
+  duration  Int // 分钟
+
+  severity      AlertSeverity @default(WARNING)
+  silencePeriod Int           @default(30) @map("silence_period") // 分钟
+
+  notifyChannels Json  @default("[]") @map("notify_channels") // string[]
+  scope          Json? // { taskIds?, promptIds?, modelIds? }
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  alerts Alert[]
+
+  @@index([isActive])
+  @@index([createdById])
+  @@index([teamId])
+  @@map("alert_rules")
+}
+
+enum AlertMetric {
+  PASS_RATE
+  AVG_LATENCY
+  ERROR_RATE
+  COST
+}
+
+enum AlertCondition {
+  LT // less than
+  GT // greater than
+  EQ // equal
+  LTE // less than or equal
+  GTE // greater than or equal
+}
+
+enum AlertSeverity {
+  WARNING
+  CRITICAL
+  URGENT
+}
+
+model Alert {
+  id     String    @id @default(uuid())
+  ruleId String    @map("rule_id")
+  rule   AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  value  Float // 触发时的指标值
+  status AlertStatus @default(TRIGGERED)
+
+  acknowledgedAt   DateTime? @map("acknowledged_at")
+  acknowledgedById String?   @map("acknowledged_by_id")
+  acknowledgedBy   User?     @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+
+  resolvedAt DateTime? @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
+enum AlertStatus {
+  TRIGGERED
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+// ============================================
+// 通知渠道模块
+// ============================================
+
+model NotifyChannel {
+  id     String            @id @default(uuid())
+  name   String
+  type   NotifyChannelType
+  config Json // { recipients?, url?, headers?, template? }
+
+  isActive Boolean @default(true) @map("is_active")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([isActive])
+  @@index([createdById])
+  @@index([teamId])
+  @@map("notify_channels")
+}
+
+enum NotifyChannelType {
+  EMAIL
+  WEBHOOK
+  INTERNAL
+}
+
+// ============================================
+// 团队管理模块
+// ============================================
+
+model Team {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  avatar      String?
+
+  ownerId String @map("owner_id")
+  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members    TeamMember[]
+  prompts    Prompt[]
+  datasets   Dataset[]
+  evaluators Evaluator[]
+  tasks      Task[]
+  providers  Provider[]
+  auditLogs  AuditLog[]
+
+  // Phase 8: 监控告警
+  scheduledTasks ScheduledTask[]
+  alertRules     AlertRule[]
+  notifyChannels NotifyChannel[]
+
+  // Phase 4: 任务模板
+  taskTemplates TaskTemplate[]
+
+  @@index([ownerId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id     String @id @default(uuid())
+  teamId String @map("team_id")
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role TeamRole @default(MEMBER)
+
+  invitedById String? @map("invited_by_id")
+  invitedBy   User?   @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model ApiToken {
+  id          String @id @default(uuid())
+  name        String
+  tokenHash   String @unique @map("token_hash")
+  tokenPrefix String @map("token_prefix")
+
+  scopes     Json      @default("[]")
+  expiresAt  DateTime? @map("expires_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("api_tokens")
+}
+
+model AuditLog {
+  id         String  @id @default(uuid())
+  action     String
+  resource   String
+  resourceId String? @map("resource_id")
+  details    Json?
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  ipAddress String? @map("ip_address")
+  userAgent String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// 任务模板模块
+// ============================================
+
+model TaskTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  // 任务配置 JSON，包含 promptId, promptVersionId, modelId, datasetId, evaluatorIds 等
+  config Json
+
+  isPublic   Boolean @default(false) @map("is_public") // 是否团队共享
+  usageCount Int     @default(0) @map("usage_count")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([isPublic])
+  @@map("task_templates")
+}

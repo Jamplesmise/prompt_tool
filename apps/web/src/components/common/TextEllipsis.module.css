@@ -1,0 +1,39 @@
+.wrapper {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.singleLine {
+  white-space: nowrap;
+}
+
+.multiLine {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+/* 多行截断行数 */
+.lines-2 {
+  -webkit-line-clamp: 2;
+}
+
+.lines-3 {
+  -webkit-line-clamp: 3;
+}
+
+.lines-4 {
+  -webkit-line-clamp: 4;
+}
+
+.lines-5 {
+  -webkit-line-clamp: 5;
+}
