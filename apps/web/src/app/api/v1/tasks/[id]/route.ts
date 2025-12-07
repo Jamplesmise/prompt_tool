@@ -149,9 +149,17 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(badRequest('正在运行的任务无法删除'), { status: 400 })
     }
 
-    // 删除任务（级联删除关联数据）
-    await prisma.task.delete({
-      where: { id },
+    // 使用事务删除任务及关联数据
+    await prisma.$transaction(async (tx) => {
+      // 先删除关联的定时任务（ScheduledTask 引用了 Task 作为模板）
+      await tx.scheduledTask.deleteMany({
+        where: { taskTemplateId: id },
+      })
+
+      // 删除任务（其他关联数据会级联删除）
+      await tx.task.delete({
+        where: { id },
+      })
     })
 
     return NextResponse.json(success(null))

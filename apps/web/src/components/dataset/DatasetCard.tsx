@@ -107,7 +107,7 @@ export function DatasetCard({
     >
       <div style={{ marginBottom: 12 }}>
         <Space align="start">
-          <DatabaseOutlined style={{ fontSize: 20, color: '#1677FF' }} />
+          <DatabaseOutlined style={{ fontSize: 20, color: '#EF4444' }} />
           <Title
             level={5}
             ellipsis={{ tooltip: name }}

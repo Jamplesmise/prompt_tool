@@ -43,7 +43,12 @@ export async function createDatasetVersion(
   // 计算行哈希
   const rowHashes = dataset.rows.map((row) => hashRow(row.data as Record<string, unknown>))
 
-  const newVersion = dataset.currentVersion + 1
+  // 获取该数据集下的最大版本号
+  const maxVersionResult = await prisma.datasetVersion.aggregate({
+    where: { datasetId },
+    _max: { version: true },
+  })
+  const newVersion = (maxVersionResult._max.version || dataset.currentVersion) + 1
 
   // 使用事务创建版本
   return prisma.$transaction(async (tx) => {

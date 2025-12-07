@@ -68,6 +68,7 @@ import type { AuditLogListItem } from '@/services/auditLogs'
 import type { AuditAction, AuditResource } from '@platform/shared'
 import dayjs from 'dayjs'
 import styles from './settings.module.css'
+import { PRIMARY, SEMANTIC } from '@/theme/colors'
 
 const { Typography } = require('antd')
 const { Text, Paragraph } = Typography
@@ -127,9 +128,9 @@ const scopeColors: Record<ApiTokenScope, string> = {
 }
 
 const channelTypeConfig: Record<NotifyChannelType, { icon: React.ReactNode; label: string; color: string }> = {
-  EMAIL: { icon: <MailOutlined />, label: '邮件', color: '#1677ff' },
-  WEBHOOK: { icon: <ApiOutlined />, label: 'Webhook', color: '#52c41a' },
-  INTERNAL: { icon: <MessageOutlined />, label: '站内消息', color: '#fa8c16' },
+  EMAIL: { icon: <MailOutlined />, label: '邮件', color: PRIMARY[500] },
+  WEBHOOK: { icon: <ApiOutlined />, label: 'Webhook', color: SEMANTIC.success },
+  INTERNAL: { icon: <MessageOutlined />, label: '站内消息', color: SEMANTIC.warning },
 }
 
 const teamRoleOptions = [
@@ -749,7 +750,7 @@ export default function SettingsPage() {
   const allPanels = [...panelItems, ...adminPanels]
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} fade-in`}>
       <div className={styles.header}>
         <h1 className={styles.title}>设置</h1>
         <p className={styles.description}>管理您的账号、团队和系统配置</p>

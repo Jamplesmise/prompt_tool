@@ -2,6 +2,8 @@
  * API 端到端测试
  * 运行前需要先启动服务: pnpm dev
  * 运行测试: npx vitest run src/__tests__/e2e/api.e2e.test.ts
+ *
+ * @vitest-environment node
  */
 
 import { describe, it, expect } from 'vitest'

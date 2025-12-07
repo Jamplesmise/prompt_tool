@@ -44,9 +44,6 @@ export function TaskEmptyState({
   }
 
   const createButtonStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, #1677FF, #4096ff)',
-    borderColor: 'transparent',
-    boxShadow: '0 2px 8px rgba(22, 119, 255, 0.3)',
     height: 40,
     paddingLeft: 24,
     paddingRight: 24,
@@ -78,7 +75,7 @@ export function TaskEmptyState({
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
-        <ThunderboltOutlined style={{ ...iconStyle, color: '#1677FF' }} />
+        <ThunderboltOutlined style={{ ...iconStyle, color: '#EF4444' }} />
         <Paragraph style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
           还没有创建测试任务
         </Paragraph>

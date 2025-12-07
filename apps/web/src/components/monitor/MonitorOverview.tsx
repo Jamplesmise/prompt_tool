@@ -60,7 +60,7 @@ export default function MonitorOverview({ data, loading }: MonitorOverviewProps)
           <Statistic
             title="总执行"
             value={totalExecutions}
-            prefix={<PlayCircleOutlined style={{ color: '#1677ff' }} />}
+            prefix={<PlayCircleOutlined style={{ color: '#EF4444' }} />}
             valueStyle={{ fontSize: 28 }}
           />
         </Col>
@@ -107,8 +107,8 @@ export default function MonitorOverview({ data, loading }: MonitorOverviewProps)
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#1677ff"
-              fill="#1677ff"
+              stroke="#EF4444"
+              fill="#EF4444"
               fillOpacity={0.2}
               strokeWidth={1.5}
             />

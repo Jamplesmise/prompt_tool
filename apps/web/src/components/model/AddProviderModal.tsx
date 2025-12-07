@@ -3,6 +3,7 @@
 import { Modal, Form, Input, Select, Button, Space } from 'antd'
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { useCreateProvider } from '@/hooks/useModels'
+import { eventBus } from '@/lib/eventBus'
 import type { ProviderType } from '@/services/models'
 
 type AddProviderModalProps = {
@@ -51,12 +52,18 @@ export function AddProviderModal({ open, onClose }: AddProviderModalProps) {
         {} as Record<string, string>
       )
 
-      await createProvider.mutateAsync({
+      const provider = await createProvider.mutateAsync({
         name: values.name,
         type: values.type,
         baseUrl: values.baseUrl,
         apiKey: values.apiKey,
         headers,
+      })
+
+      // 触发模型配置事件
+      eventBus.emit('model:configured', {
+        providerId: provider.id,
+        providerName: values.name,
       })
 
       form.resetFields()

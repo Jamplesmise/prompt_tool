@@ -5,6 +5,9 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'AI 模型测试平台',
   description: '面向 AI 开发团队的提示词测试与模型评估工具',
+  icons: {
+    icon: '/favicon.png',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

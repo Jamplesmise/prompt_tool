@@ -145,7 +145,7 @@ export default function PromptsPage() {
   }
 
   return (
-    <div>
+    <div className="fade-in">
       {/* 页面标题 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>

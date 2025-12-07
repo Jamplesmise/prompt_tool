@@ -13,6 +13,7 @@ type ShortcutGroup = {
   shortcuts: {
     keys: string[]
     description: string
+    separator?: string  // 键之间的分隔符，默认 '+'
   }[]
 }
 
@@ -29,10 +30,24 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
     {
       title: '全局',
       shortcuts: [
-        { keys: [modKey, 'K'], description: '打开全局搜索' },
+        { keys: [modKey, 'K'], description: '打开命令面板' },
         { keys: [modKey, 'N'], description: '新建任务' },
         { keys: [modKey, ','], description: '打开设置' },
         { keys: ['?'], description: '显示快捷键帮助' },
+      ],
+    },
+    {
+      title: '导航 (按 G 后接字母)',
+      shortcuts: [
+        { keys: ['G', 'H'], description: '前往工作台', separator: ' ' },
+        { keys: ['G', 'P'], description: '前往提示词管理', separator: ' ' },
+        { keys: ['G', 'D'], description: '前往数据集', separator: ' ' },
+        { keys: ['G', 'M'], description: '前往模型配置', separator: ' ' },
+        { keys: ['G', 'E'], description: '前往评估器', separator: ' ' },
+        { keys: ['G', 'T'], description: '前往测试任务', separator: ' ' },
+        { keys: ['G', 'S'], description: '前往设置', separator: ' ' },
+        { keys: ['G', 'C'], description: '前往对比分析', separator: ' ' },
+        { keys: ['G', 'O'], description: '前往监控中心', separator: ' ' },
       ],
     },
     {
@@ -43,19 +58,12 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
       ],
     },
     {
-      title: '导航',
+      title: '列表',
       shortcuts: [
-        { keys: ['↑', '↓'], description: '上下移动选择' },
+        { keys: ['↑', '↓'], description: '上下移动选择', separator: ' / ' },
         { keys: ['Enter'], description: '确认选择' },
         { keys: ['Tab'], description: '下一个字段' },
         { keys: ['Shift', 'Tab'], description: '上一个字段' },
-      ],
-    },
-    {
-      title: '搜索框',
-      shortcuts: [
-        { keys: ['>'], description: '进入命令模式' },
-        { keys: ['Backspace'], description: '退出命令模式' },
       ],
     },
   ], [modKey])
@@ -71,7 +79,7 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
           快捷键帮助
         </div>
       }
-      width={500}
+      width={520}
       centered
     >
       <div className={styles.container}>
@@ -88,7 +96,9 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
                       <span key={keyIndex}>
                         <kbd className={styles.key}>{key}</kbd>
                         {keyIndex < shortcut.keys.length - 1 && (
-                          <span className={styles.plus}>+</span>
+                          <span className={styles.separator}>
+                            {shortcut.separator ?? '+'}
+                          </span>
                         )}
                       </span>
                     ))}
@@ -101,6 +111,10 @@ export function KeyboardShortcutsHelp({ open, onClose }: KeyboardShortcutsHelpPr
             </div>
           </div>
         ))}
+
+        <div className={styles.tip}>
+          提示：序列快捷键 (如 G H) 需要在 800ms 内连续按下
+        </div>
       </div>
     </Modal>
   )

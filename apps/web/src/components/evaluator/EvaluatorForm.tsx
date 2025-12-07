@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Form, Input, Card, Table, Typography, Button, Space, Select, InputNumber, Radio, Alert } from 'antd'
-import { SaveOutlined } from '@ant-design/icons'
-import { CodeEditor } from './CodeEditor'
+import { useState } from 'react'
+import { Form, Input, Button, Space, Select, InputNumber, Radio, Alert, Row, Col, Typography } from 'antd'
+import { SaveOutlined, InfoCircleOutlined, CodeOutlined, RobotOutlined, MergeCellsOutlined, AppstoreOutlined } from '@ant-design/icons'
+import { CodeEditor, FormSection } from '@/components/common'
 import { CODE_TEMPLATES, type CodeLanguage } from '@/lib/sandbox'
 import { DEFAULT_EVALUATION_PROMPT } from '@platform/evaluators'
 import type { PresetType } from '@platform/evaluators'
@@ -236,39 +236,56 @@ export function EvaluatorForm({
       initialValues={getInitialValues()}
       onFinish={handleFinish}
     >
-      <Card title="基本信息" size="small" style={{ marginBottom: 16 }}>
-        <Form.Item
-          name="name"
-          label="名称"
-          rules={[{ required: true, message: '请输入评估器名称' }]}
-        >
-          <Input placeholder="评估器名称" />
-        </Form.Item>
+      <FormSection title="基本信息" icon={<InfoCircleOutlined />}>
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[{ required: true, message: '请输入评估器名称' }]}
+            >
+              <Input placeholder="输入评估器名称" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="evaluatorType"
+              label="类型"
+              rules={[{ required: true, message: '请选择评估器类型' }]}
+            >
+              <Radio.Group
+                onChange={(e) => setEvaluatorType(e.target.value)}
+                disabled={isEdit}
+                optionType="button"
+                buttonStyle="solid"
+                className="type-radio-group"
+              >
+                <Radio.Button value="preset">预置评估器</Radio.Button>
+                <Radio.Button value="code">代码评估器</Radio.Button>
+                <Radio.Button value="llm">LLM 评估器</Radio.Button>
+                <Radio.Button value="composite">组合评估器</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item name="description" label="描述">
-          <TextArea rows={2} placeholder="评估器描述（可选）" />
-        </Form.Item>
-
         <Form.Item
-          name="evaluatorType"
-          label="类型"
-          rules={[{ required: true, message: '请选择评估器类型' }]}
+          name="description"
+          label="描述"
+          extra="简要描述评估器的用途和评估逻辑"
         >
-          <Radio.Group
-            onChange={(e) => setEvaluatorType(e.target.value)}
-            disabled={isEdit}
-          >
-            <Radio.Button value="preset">预置评估器</Radio.Button>
-            <Radio.Button value="code">代码评估器</Radio.Button>
-            <Radio.Button value="llm">LLM 评估器</Radio.Button>
-            <Radio.Button value="composite">组合评估器</Radio.Button>
-          </Radio.Group>
+          <TextArea
+            rows={3}
+            placeholder="评估器描述（可选）"
+            showCount
+            maxLength={200}
+          />
         </Form.Item>
-      </Card>
+      </FormSection>
 
       {/* 预置评估器配置 */}
       {evaluatorType === 'preset' && (
-        <Card title="预置评估器配置" size="small" style={{ marginBottom: 16 }}>
+        <FormSection title="预置评估器配置" icon={<AppstoreOutlined />}>
           <Form.Item
             name="presetType"
             label="评估器类型"
@@ -300,18 +317,22 @@ export function EvaluatorForm({
           )}
 
           {presetType === 'regex' && (
-            <>
-              <Form.Item
-                name="regexPattern"
-                label="正则表达式"
-                rules={[{ required: true, message: '请输入正则表达式' }]}
-              >
-                <Input placeholder="例如：\d{4}-\d{2}-\d{2}" />
-              </Form.Item>
-              <Form.Item name="regexFlags" label="标志位">
-                <Input placeholder="例如：i" style={{ width: 120 }} />
-              </Form.Item>
-            </>
+            <Row gutter={24}>
+              <Col xs={24} md={16}>
+                <Form.Item
+                  name="regexPattern"
+                  label="正则表达式"
+                  rules={[{ required: true, message: '请输入正则表达式' }]}
+                >
+                  <Input placeholder="例如：\d{4}-\d{2}-\d{2}" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={8}>
+                <Form.Item name="regexFlags" label="标志位">
+                  <Input placeholder="例如：i" />
+                </Form.Item>
+              </Col>
+            </Row>
           )}
 
           {presetType === 'json_schema' && (
@@ -320,96 +341,97 @@ export function EvaluatorForm({
               label="JSON Schema"
               rules={[{ required: true, message: '请输入 JSON Schema' }]}
             >
-              <TextArea rows={8} style={{ fontFamily: 'monospace' }} />
+              <CodeEditor
+                value={form.getFieldValue('jsonSchema') || '{\n  \n}'}
+                onChange={(val) => form.setFieldValue('jsonSchema', val)}
+                height={200}
+                language="json"
+                title="JSON Schema"
+              />
             </Form.Item>
           )}
 
           {presetType === 'similarity' && (
-            <Space size="large">
-              <Form.Item name="similarityThreshold" label="相似度阈值">
-                <InputNumber min={0} max={1} step={0.05} style={{ width: 120 }} />
-              </Form.Item>
-              <Form.Item name="similarityAlgorithm" label="算法">
-                <Select
-                  style={{ width: 200 }}
-                  options={[
-                    { value: 'levenshtein', label: 'Levenshtein' },
-                    { value: 'cosine', label: 'Cosine' },
-                    { value: 'jaccard', label: 'Jaccard' },
-                  ]}
-                />
-              </Form.Item>
-            </Space>
+            <Row gutter={24}>
+              <Col xs={24} md={12}>
+                <Form.Item name="similarityThreshold" label="相似度阈值">
+                  <InputNumber min={0} max={1} step={0.05} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={12}>
+                <Form.Item name="similarityAlgorithm" label="算法">
+                  <Select
+                    options={[
+                      { value: 'levenshtein', label: 'Levenshtein' },
+                      { value: 'cosine', label: 'Cosine' },
+                      { value: 'jaccard', label: 'Jaccard' },
+                    ]}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
           )}
-        </Card>
+        </FormSection>
       )}
 
       {/* 代码评估器配置 */}
       {evaluatorType === 'code' && (
-        <>
-          <Card title="输入参数" size="small" style={{ marginBottom: 16 }}>
-            <Table
-              dataSource={INPUT_PARAMS}
-              rowKey="key"
-              size="small"
-              pagination={false}
-              columns={[
-                { title: '参数名', dataIndex: 'key', width: 120, render: (text) => <Text code>{text}</Text> },
-                { title: '类型', dataIndex: 'type', width: 150, render: (text) => <Text type="secondary">{text}</Text> },
-                { title: '说明', dataIndex: 'description' },
-              ]}
-            />
-          </Card>
+        <FormSection
+          title="代码评估器"
+          icon={<CodeOutlined />}
+          description="编写自定义评估逻辑，支持 Node.js 和 Python"
+        >
+          {/* 输入参数说明 */}
+          <div className="params-info">
+            <div className="params-title">输入参数</div>
+            <div className="params-grid">
+              {INPUT_PARAMS.map((param) => (
+                <div key={param.key} className="param-item">
+                  <code>{param.key}</code>
+                  <span className="param-type">{param.type}</span>
+                  <span className="param-desc">{param.description}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <Card
-            title="代码"
-            size="small"
-            style={{ marginBottom: 16 }}
-            extra={
-              <Space>
-                <Form.Item name="language" noStyle>
-                  <Select
-                    style={{ width: 120 }}
-                    onChange={handleLanguageChange}
-                    options={[
-                      { value: 'nodejs', label: 'Node.js' },
-                      { value: 'python', label: 'Python' },
-                    ]}
-                  />
-                </Form.Item>
-                <Text type="secondary">超时:</Text>
-                <Space.Compact>
-                  <Form.Item name="timeout" noStyle>
-                    <InputNumber min={1000} max={30000} step={1000} style={{ width: 80 }} />
-                  </Form.Item>
-                  <Button disabled style={{ pointerEvents: 'none' }}>ms</Button>
-                </Space.Compact>
-              </Space>
-            }
-          >
-            {codeLanguage === 'python' && (
-              <Alert
-                type="info"
-                message="Python 评估器使用远程沙箱执行"
-                showIcon
-                style={{ marginBottom: 12 }}
-              />
-            )}
-            <Form.Item name="code" rules={[{ required: true, message: '请输入评估代码' }]} style={{ marginBottom: 0 }}>
-              <CodeEditor
-                value={form.getFieldValue('code') || CODE_TEMPLATES[codeLanguage]}
-                onChange={(val) => form.setFieldValue('code', val)}
-                height={350}
-                language={codeLanguage === 'python' ? 'python' : 'javascript'}
-              />
-            </Form.Item>
-          </Card>
-        </>
+          {codeLanguage === 'python' && (
+            <Alert
+              type="info"
+              message="Python 评估器使用远程沙箱执行"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          <Form.Item name="code" rules={[{ required: true, message: '请输入评估代码' }]} style={{ marginBottom: 0 }}>
+            <CodeEditor
+              value={form.getFieldValue('code') || CODE_TEMPLATES[codeLanguage]}
+              onChange={(val) => form.setFieldValue('code', val)}
+              height={350}
+              language={codeLanguage === 'python' ? 'python' : 'javascript'}
+              title="评估代码"
+              timeout={form.getFieldValue('timeout') || 5000}
+              onTimeoutChange={(val) => form.setFieldValue('timeout', val)}
+              onLanguageChange={(lang) => {
+                const newLang = lang === 'python' ? 'python' : 'nodejs'
+                handleLanguageChange(newLang as CodeLanguage)
+                form.setFieldValue('language', newLang)
+              }}
+            />
+          </Form.Item>
+          <Form.Item name="language" hidden><Input /></Form.Item>
+          <Form.Item name="timeout" hidden><InputNumber /></Form.Item>
+        </FormSection>
       )}
 
       {/* LLM 评估器配置 */}
       {evaluatorType === 'llm' && (
-        <Card title="LLM 评估器配置" size="small" style={{ marginBottom: 16 }}>
+        <FormSection
+          title="LLM 评估器"
+          icon={<RobotOutlined />}
+          description="使用大语言模型进行智能评估，支持自定义评估提示词"
+        >
           <Alert
             type="warning"
             message="LLM 评估器会消耗 Token"
@@ -443,34 +465,37 @@ export function EvaluatorForm({
               onChange={(val) => form.setFieldValue('prompt', val)}
               height={250}
               language="json"
+              title="评估提示词"
             />
           </Form.Item>
 
-          <Space size="large">
-            <Form.Item name={['scoreRange', 'min']} label="最小分">
-              <InputNumber min={0} max={100} style={{ width: 80 }} />
-            </Form.Item>
-            <Form.Item name={['scoreRange', 'max']} label="最大分">
-              <InputNumber min={1} max={100} style={{ width: 80 }} />
-            </Form.Item>
-            <Form.Item name="passThreshold" label="通过阈值">
-              <InputNumber min={0} max={1} step={0.1} style={{ width: 80 }} />
-            </Form.Item>
-          </Space>
-        </Card>
+          <Row gutter={24}>
+            <Col xs={24} sm={8}>
+              <Form.Item name={['scoreRange', 'min']} label="最小分">
+                <InputNumber min={0} max={100} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name={['scoreRange', 'max']} label="最大分">
+                <InputNumber min={1} max={100} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="passThreshold" label="通过阈值">
+                <InputNumber min={0} max={1} step={0.1} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+        </FormSection>
       )}
 
       {/* 组合评估器配置 */}
       {evaluatorType === 'composite' && (
-        <Card title="组合评估器配置" size="small" style={{ marginBottom: 16 }}>
-          <Alert
-            type="info"
-            message="组合评估器"
-            description="将多个评估器组合，支持串行/并行执行和多种聚合方式"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-
+        <FormSection
+          title="组合评估器"
+          icon={<MergeCellsOutlined />}
+          description="将多个评估器组合，支持串行/并行执行和多种聚合方式"
+        >
           <Form.Item
             name="evaluatorIds"
             label="子评估器"
@@ -486,24 +511,29 @@ export function EvaluatorForm({
             />
           </Form.Item>
 
-          <Form.Item name="mode" label="执行模式">
-            <Radio.Group>
-              <Radio.Button value="parallel">并行执行</Radio.Button>
-              <Radio.Button value="serial">串行执行</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-
-          <Form.Item name="aggregation" label="聚合方式">
-            <Radio.Group>
-              <Radio.Button value="and">AND (全部通过)</Radio.Button>
-              <Radio.Button value="or">OR (任一通过)</Radio.Button>
-              <Radio.Button value="weighted_average">加权平均</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-        </Card>
+          <Row gutter={24}>
+            <Col xs={24} md={12}>
+              <Form.Item name="mode" label="执行模式">
+                <Radio.Group optionType="button" buttonStyle="solid" className="type-radio-group">
+                  <Radio.Button value="parallel">并行执行</Radio.Button>
+                  <Radio.Button value="serial">串行执行</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12}>
+              <Form.Item name="aggregation" label="聚合方式">
+                <Radio.Group optionType="button" buttonStyle="solid" className="type-radio-group">
+                  <Radio.Button value="and">AND</Radio.Button>
+                  <Radio.Button value="or">OR</Radio.Button>
+                  <Radio.Button value="weighted_average">加权平均</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+          </Row>
+        </FormSection>
       )}
 
-      <div style={{ textAlign: 'right' }}>
+      <div className="form-actions">
         <Button
           type="primary"
           htmlType="submit"

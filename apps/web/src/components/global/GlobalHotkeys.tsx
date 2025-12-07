@@ -33,12 +33,9 @@ export function GlobalHotkeys() {
     setHelpOpen(false)
   }, [])
 
-  const openSettings = useCallback(() => {
-    router.push('/settings/general')
-  }, [router])
-
-  const createTask = useCallback(() => {
-    router.push('/tasks/new')
+  // 导航函数
+  const goTo = useCallback((path: string) => {
+    router.push(path)
   }, [router])
 
   // 注册全局快捷键
@@ -46,14 +43,28 @@ export function GlobalHotkeys() {
     // 打开全局搜索 - Ctrl/Cmd + K
     { key: 'ctrl+k', callback: openSearch, description: '打开全局搜索' },
     { key: 'cmd+k', callback: openSearch, description: '打开全局搜索' },
+
     // 新建任务 - Ctrl/Cmd + N
-    { key: 'ctrl+n', callback: createTask, description: '新建任务' },
-    { key: 'cmd+n', callback: createTask, description: '新建任务' },
+    { key: 'ctrl+n', callback: () => goTo('/tasks/new'), description: '新建任务' },
+    { key: 'cmd+n', callback: () => goTo('/tasks/new'), description: '新建任务' },
+
     // 打开设置 - Ctrl/Cmd + ,
-    { key: 'ctrl+,', callback: openSettings, description: '打开设置' },
-    { key: 'cmd+,', callback: openSettings, description: '打开设置' },
+    { key: 'ctrl+,', callback: () => goTo('/settings'), description: '打开设置' },
+    { key: 'cmd+,', callback: () => goTo('/settings'), description: '打开设置' },
+
     // 显示帮助 - ?
     { key: '?', callback: openHelp, description: '显示快捷键帮助' },
+
+    // G + 字母 序列快捷键导航
+    { key: 'g h', callback: () => goTo('/'), description: '前往工作台' },
+    { key: 'g p', callback: () => goTo('/prompts'), description: '前往提示词管理' },
+    { key: 'g d', callback: () => goTo('/datasets'), description: '前往数据集' },
+    { key: 'g m', callback: () => goTo('/models'), description: '前往模型配置' },
+    { key: 'g e', callback: () => goTo('/evaluators'), description: '前往评估器' },
+    { key: 'g t', callback: () => goTo('/tasks'), description: '前往测试任务' },
+    { key: 'g s', callback: () => goTo('/settings'), description: '前往设置' },
+    { key: 'g c', callback: () => goTo('/comparison/versions'), description: '前往对比分析' },
+    { key: 'g o', callback: () => goTo('/monitor/overview'), description: '前往监控中心' },
   ])
 
   return (

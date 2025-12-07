@@ -1,0 +1,84 @@
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  border-color: #FECACA;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.card:focus {
+  outline: none;
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 22px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 14px;
+  color: #8c8c8c;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #262626;
+  line-height: 1.2;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+.suffix {
+  font-size: 14px;
+  color: #8c8c8c;
+  font-weight: 400;
+}
+
+.trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.trendValue {
+  font-weight: 500;
+}
+
+.trendLabel {
+  color: #8c8c8c;
+  margin-left: 4px;
+}

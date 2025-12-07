@@ -111,19 +111,19 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // 使用事务批量删除
+    // 使用事务批量删除 - 注意顺序：分支引用版本，需要先删分支
     const result = await prisma.$transaction(async (tx) => {
-      // 先删除关联的版本
-      await tx.promptVersion.deleteMany({
-        where: { promptId: { in: ids } },
-      })
-
-      // 删除关联的分支
+      // 1. 先删除关联的分支（分支引用版本作为 sourceVersion）
       await tx.promptBranch.deleteMany({
         where: { promptId: { in: ids } },
       })
 
-      // 删除提示词
+      // 2. 再删除关联的版本
+      await tx.promptVersion.deleteMany({
+        where: { promptId: { in: ids } },
+      })
+
+      // 3. 最后删除提示词
       const deleted = await tx.prompt.deleteMany({
         where: { id: { in: ids } },
       })

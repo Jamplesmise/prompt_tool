@@ -23,7 +23,10 @@ import {
 } from '@/components/dataset'
 import type { ViewMode } from '@/components/dataset'
 import { LoadingState, ErrorState, EmptyState } from '@/components/common'
+import { DatasetUploadedTip } from '@/components/guidance'
+import { eventBus } from '@/lib/eventBus'
 import type { DatasetListItem } from '@/services/datasets'
+import { PRIMARY, GRAY, SEMANTIC } from '@/theme/colors'
 
 const { Title } = Typography
 
@@ -82,6 +85,13 @@ export default function DatasetsPage() {
       throw new Error(response.message)
     }
 
+    // 触发数据集上传事件
+    eventBus.emit('dataset:uploaded', {
+      datasetId: dataset.id,
+      datasetName: dataset.name,
+      rowCount: response.data?.rowCount || 0,
+    })
+
     setUploadModalOpen(false)
     refetch()
   }
@@ -106,7 +116,12 @@ export default function DatasetsPage() {
       key: 'name',
       width: 200,
       render: (name, record) => (
-        <a onClick={() => router.push(`/datasets/${record.id}`)}>{name}</a>
+        <a
+          onClick={() => router.push(`/datasets/${record.id}`)}
+          style={{ fontWeight: 500, color: PRIMARY[500] }}
+        >
+          {name}
+        </a>
       ),
     },
     {
@@ -114,7 +129,7 @@ export default function DatasetsPage() {
       dataIndex: 'description',
       key: 'description',
       ellipsis: true,
-      render: (text) => text || '-',
+      render: (text) => <span style={{ color: GRAY[500] }}>{text || '-'}</span>,
     },
     {
       title: '行数',
@@ -129,7 +144,14 @@ export default function DatasetsPage() {
       key: 'isPersistent',
       width: 100,
       render: (isPersistent) => (
-        <Tag color={isPersistent ? 'green' : 'orange'}>
+        <Tag
+          style={{
+            margin: 0,
+            background: isPersistent ? '#D1FAE5' : '#FEF3C7',
+            color: isPersistent ? '#065F46' : '#92400E',
+            border: 'none',
+          }}
+        >
           {isPersistent ? '持久化' : '临时'}
         </Tag>
       ),
@@ -139,7 +161,11 @@ export default function DatasetsPage() {
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 180,
-      render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+      render: (date) => (
+        <span style={{ color: GRAY[500] }}>
+          {dayjs(date).format('YYYY-MM-DD HH:mm')}
+        </span>
+      ),
     },
     {
       title: '操作',
@@ -246,7 +272,7 @@ export default function DatasetsPage() {
   )
 
   return (
-    <div>
+    <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>
           数据集管理
@@ -260,11 +286,19 @@ export default function DatasetsPage() {
             type="primary"
             icon={<UploadOutlined />}
             onClick={() => setUploadModalOpen(true)}
+            style={{
+              background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+              border: 'none',
+              boxShadow: `0 2px 8px ${PRIMARY[500]}40`,
+            }}
           >
             上传数据集
           </Button>
         </Space>
       </div>
+
+      {/* 数据集上传后的提示 */}
+      <DatasetUploadedTip />
 
       <div style={{ marginBottom: 16 }}>
         <Space>

@@ -16,6 +16,7 @@ AI 模型测试平台 - 面向 AI 开发团队的提示词测试与模型评估�
 | 后端 | Next.js API Routes + Prisma + BullMQ |
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 状态管理 | Zustand + React Query |
+| 进程通信 | Redis Pub/Sub（跨进程事件推送） |
 
 ## 项目结构
 
@@ -90,6 +91,7 @@ chore: 杂项
 | `docs/07-ui-convention.md` | UI 组件选择、代码示例 |
 | `docs/08-project-structure.md` | 目录结构、文件规范 |
 | `docs/09-deployment.md` | 环境配置、Docker 部署 |
+| `docs/10-troubleshooting.md` | 问题排查与修复记录 |
 
 ## 分阶段开发文档
 

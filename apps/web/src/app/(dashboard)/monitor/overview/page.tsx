@@ -9,6 +9,7 @@ import {
   AlertList,
   MonitorOverview,
   ModelPerformanceTable,
+  AnomalyDetectionPanel,
 } from '@/components/monitor'
 import { useTrends, useModelPerformance } from '@/hooks/useMetrics'
 import { useActiveAlerts } from '@/hooks/useAlerts'
@@ -70,6 +71,11 @@ export default function MonitorOverviewPage() {
           >
             <AlertList alerts={activeAlerts} loading={alertsLoading} />
           </Card>
+        </Col>
+
+        {/* 智能异常检测面板 */}
+        <Col span={24}>
+          <AnomalyDetectionPanel />
         </Col>
 
         {/* 模型性能对比表格 */}

@@ -19,20 +19,21 @@ import type { TaskStatus, TaskProgress as TaskProgressType, TaskStats, TaskType 
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
+import { PRIMARY, GRAY, SEMANTIC } from '@/theme/colors'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
 const { Text, Title } = Typography
 
-// 状态颜色映射
+// 状态颜色映射 - 使用主题色
 const STATUS_CONFIG: Record<TaskStatus, { color: string; icon: ReactNode; label: string }> = {
-  PENDING: { color: '#8c8c8c', icon: <ClockCircleOutlined />, label: '等待中' },
-  RUNNING: { color: '#1677FF', icon: <LoadingOutlined spin />, label: '执行中' },
-  PAUSED: { color: '#FAAD14', icon: <PauseCircleOutlined />, label: '已暂停' },
-  COMPLETED: { color: '#52C41A', icon: <CheckCircleOutlined />, label: '已完成' },
-  FAILED: { color: '#FF4D4F', icon: <CloseCircleOutlined />, label: '失败' },
-  STOPPED: { color: '#8c8c8c', icon: <StopOutlined />, label: '已终止' },
+  PENDING: { color: GRAY[500], icon: <ClockCircleOutlined />, label: '等待中' },
+  RUNNING: { color: PRIMARY[500], icon: <LoadingOutlined spin />, label: '执行中' },
+  PAUSED: { color: SEMANTIC.warning, icon: <PauseCircleOutlined />, label: '已暂停' },
+  COMPLETED: { color: SEMANTIC.success, icon: <CheckCircleOutlined />, label: '已完成' },
+  FAILED: { color: SEMANTIC.error, icon: <CloseCircleOutlined />, label: '失败' },
+  STOPPED: { color: GRAY[500], icon: <StopOutlined />, label: '已终止' },
 }
 
 type TaskCardProps = {
@@ -127,39 +128,39 @@ export function TaskCard({
           percent={percent}
           status="active"
           strokeColor={{
-            '0%': '#1677FF',
-            '100%': '#69b1ff',
+            '0%': PRIMARY[500],
+            '100%': PRIMARY[400],
           }}
           showInfo={false}
         />
       </div>
 
       {/* 统计指标 */}
-      <Row gutter={12} style={{ marginBottom: 16 }}>
+      <Row gutter={8} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#262626' }}>{progress.total}</div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>总数</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', background: GRAY[50], borderRadius: 6, minHeight: 56 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: GRAY[800], lineHeight: 1.2 }}>{progress.total}</div>
+            <div style={{ fontSize: 11, color: GRAY[500], marginTop: 2 }}>总数</div>
           </div>
         </Col>
         <Col span={6}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#1677FF' }}>{progress.completed}</div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>已完成</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', background: GRAY[50], borderRadius: 6, minHeight: 56 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: PRIMARY[500], lineHeight: 1.2 }}>{progress.completed}</div>
+            <div style={{ fontSize: 11, color: GRAY[500], marginTop: 2 }}>已完成</div>
           </div>
         </Col>
         <Col span={6}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#52C41A' }}>{passedCount}</div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>通过</div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', background: GRAY[50], borderRadius: 6, minHeight: 56 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: SEMANTIC.success, lineHeight: 1.2 }}>{passedCount}</div>
+            <div style={{ fontSize: 11, color: GRAY[500], marginTop: 2 }}>通过</div>
           </div>
         </Col>
         <Col span={6}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: progress.failed > 0 ? '#FF4D4F' : '#262626' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '10px 4px', background: GRAY[50], borderRadius: 6, minHeight: 56 }}>
+            <div style={{ fontSize: 16, fontWeight: 600, color: progress.failed > 0 ? SEMANTIC.error : GRAY[800], lineHeight: 1.2 }}>
               {progress.failed}
             </div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>失败</div>
+            <div style={{ fontSize: 11, color: GRAY[500], marginTop: 2 }}>失败</div>
           </div>
         </Col>
       </Row>
@@ -171,11 +172,11 @@ export function TaskCard({
           {estimatedTime ? `预估剩余: ${estimatedTime}` : getDuration() ? `已耗时: ${getDuration()}` : ''}
         </Text>
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView}>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView} style={{ color: PRIMARY[500] }}>
             查看详情
           </Button>
           {status === 'RUNNING' && onPause && (
-            <Button type="link" size="small" icon={<PauseCircleOutlined />} onClick={onPause}>
+            <Button type="link" size="small" icon={<PauseCircleOutlined />} onClick={onPause} style={{ color: PRIMARY[500] }}>
               暂停
             </Button>
           )}
@@ -200,7 +201,7 @@ export function TaskCard({
             value={passRate || '-'}
             suffix={passRate ? '%' : ''}
             valueStyle={{
-              color: passRate && parseFloat(passRate) >= 90 ? '#52C41A' : passRate && parseFloat(passRate) >= 70 ? '#FAAD14' : '#FF4D4F',
+              color: passRate && parseFloat(passRate) >= 90 ? SEMANTIC.success : passRate && parseFloat(passRate) >= 70 ? SEMANTIC.warning : SEMANTIC.error,
               fontSize: 24,
             }}
           />
@@ -216,7 +217,7 @@ export function TaskCard({
           <Statistic
             title="完成时间"
             value={completedAt ? dayjs(completedAt).fromNow() : '-'}
-            valueStyle={{ fontSize: 16, color: '#8c8c8c' }}
+            valueStyle={{ fontSize: 16, color: GRAY[500] }}
           />
         </Col>
       </Row>
@@ -239,16 +240,16 @@ export function TaskCard({
       {/* 操作按钮 */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView}>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView} style={{ color: PRIMARY[500] }}>
             查看详情
           </Button>
           {progress.failed > 0 && onRetry && (
-            <Button type="link" size="small" icon={<ReloadOutlined />} onClick={onRetry} loading={loading}>
+            <Button type="link" size="small" icon={<ReloadOutlined />} onClick={onRetry} loading={loading} style={{ color: PRIMARY[500] }}>
               重试失败
             </Button>
           )}
           {onExport && (
-            <Button type="link" size="small" icon={<ExportOutlined />} onClick={onExport}>
+            <Button type="link" size="small" icon={<ExportOutlined />} onClick={onExport} style={{ color: PRIMARY[500] }}>
               导出报告
             </Button>
           )}
@@ -263,7 +264,7 @@ export function TaskCard({
       <div style={{
         textAlign: 'center',
         padding: '24px 0',
-        color: '#8c8c8c',
+        color: GRAY[500],
       }}>
         {queueState === 'waiting' ? (
           <>
@@ -279,11 +280,11 @@ export function TaskCard({
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView}>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView} style={{ color: PRIMARY[500] }}>
             查看详情
           </Button>
           {!queueState && onRun && (
-            <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={onRun} loading={loading}>
+            <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={onRun} loading={loading} style={{ color: PRIMARY[500] }}>
               启动任务
             </Button>
           )}
@@ -304,7 +305,7 @@ export function TaskCard({
         <Progress
           percent={percent}
           status="normal"
-          strokeColor="#FAAD14"
+          strokeColor={SEMANTIC.warning}
           showInfo={false}
         />
       </div>
@@ -312,23 +313,23 @@ export function TaskCard({
       {/* 统计指标 */}
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col span={8}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600 }}>{progress.completed}/{progress.total}</div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>已完成</div>
+          <div style={{ textAlign: 'center', padding: '8px 0', background: GRAY[50], borderRadius: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: GRAY[800] }}>{progress.completed}/{progress.total}</div>
+            <div style={{ fontSize: 12, color: GRAY[500] }}>已完成</div>
           </div>
         </Col>
         <Col span={8}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#52C41A' }}>{passedCount}</div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>通过</div>
+          <div style={{ textAlign: 'center', padding: '8px 0', background: GRAY[50], borderRadius: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: SEMANTIC.success }}>{passedCount}</div>
+            <div style={{ fontSize: 12, color: GRAY[500] }}>通过</div>
           </div>
         </Col>
         <Col span={8}>
-          <div style={{ textAlign: 'center', padding: '8px 0', background: '#fafafa', borderRadius: 6 }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: progress.failed > 0 ? '#FF4D4F' : '#262626' }}>
+          <div style={{ textAlign: 'center', padding: '8px 0', background: GRAY[50], borderRadius: 6 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, color: progress.failed > 0 ? SEMANTIC.error : GRAY[800] }}>
               {progress.failed}
             </div>
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>失败</div>
+            <div style={{ fontSize: 12, color: GRAY[500] }}>失败</div>
           </div>
         </Col>
       </Row>
@@ -336,11 +337,11 @@ export function TaskCard({
       {/* 操作按钮 */}
       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView}>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={onView} style={{ color: PRIMARY[500] }}>
             查看详情
           </Button>
           {onResume && (
-            <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={onResume} loading={loading}>
+            <Button type="link" size="small" icon={<PlayCircleOutlined />} onClick={onResume} loading={loading} style={{ color: PRIMARY[500] }}>
               继续执行
             </Button>
           )}
@@ -418,12 +419,12 @@ export function TaskCard({
 
       <style jsx global>{`
         .task-card {
-          border: 1px solid #f0f0f0;
+          border: 1px solid ${GRAY[200]};
         }
         .task-card:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-          border-color: #1677FF;
+          border-color: ${PRIMARY[300]};
         }
       `}</style>
     </Card>

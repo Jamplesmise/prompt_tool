@@ -1,0 +1,53 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.icon {
+  font-size: 56px;
+  color: #9CA3AF;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 8px;
+}
+
+.message {
+  font-size: 14px;
+  color: #6B7280;
+  margin-bottom: 24px;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+.retryButton {
+  min-width: 120px;
+}
+
+/* 紧凑模式 */
+.compact {
+  padding: 24px 16px;
+}
+
+.compact .icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.compact .title {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.compact .message {
+  font-size: 13px;
+  margin-bottom: 16px;
+}

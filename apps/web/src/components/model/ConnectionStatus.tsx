@@ -24,7 +24,7 @@ const STATUS_CONFIG: Record<ConnectionState, { color: string; text: string }> = 
   slow: { color: '#FAAD14', text: '连接慢' },
   failed: { color: '#FF4D4F', text: '连接失败' },
   unknown: { color: '#8c8c8c', text: '未测试' },
-  testing: { color: '#1677FF', text: '测试中' },
+  testing: { color: '#EF4444', text: '测试中' },
 }
 
 const StatusIcon = ({ status }: { status: ConnectionState }) => {

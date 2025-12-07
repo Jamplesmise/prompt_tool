@@ -31,7 +31,7 @@ export const EVALUATOR_TYPE_CONFIG: Record<EvaluatorTypeKey, TypeConfig> = {
   },
   contains: {
     icon: '🔍',
-    color: '#1677FF',
+    color: '#EF4444',
     label: '包含匹配',
     description: '输出包含期望内容',
   },

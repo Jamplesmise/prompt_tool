@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons'
 import type { TaskStatus } from '@platform/shared'
 import type { CSSProperties } from 'react'
+import { PRIMARY, GRAY } from '@/theme/colors'
 
 const STATUS_OPTIONS = [
   { value: '', label: '全部状态' },
@@ -76,9 +77,9 @@ export function TaskFilters({
   }
 
   const createButtonStyle: CSSProperties = {
-    background: 'linear-gradient(135deg, #1677FF, #4096ff)',
-    borderColor: 'transparent',
-    boxShadow: '0 2px 8px rgba(22, 119, 255, 0.3)',
+    background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+    border: 'none',
+    boxShadow: `0 2px 8px ${PRIMARY[500]}40`,
   }
 
   const hasFilters = value.search || value.type || value.status || value.timeRange
@@ -125,8 +126,8 @@ export function TaskFilters({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Space size="middle">
           <Space size={4}>
-            <FilterOutlined style={{ color: '#8c8c8c' }} />
-            <span style={{ color: '#8c8c8c', fontSize: 14 }}>筛选:</span>
+            <FilterOutlined style={{ color: GRAY[500] }} />
+            <span style={{ color: GRAY[500], fontSize: 14 }}>筛选:</span>
           </Space>
           <Select
             value={value.type || ''}
@@ -154,6 +155,7 @@ export function TaskFilters({
               type="link"
               size="small"
               onClick={() => onChange({ search: '', type: '', status: '', timeRange: '' })}
+              style={{ color: PRIMARY[500] }}
             >
               清除筛选
             </Button>

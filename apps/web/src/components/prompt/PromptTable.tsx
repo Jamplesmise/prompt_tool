@@ -14,6 +14,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import { TAG_COLORS } from './TagSelect'
+import { PRIMARY, GRAY } from '@/theme/colors'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -71,7 +72,7 @@ export function PromptTable({
       render: (name, record) => (
         <a
           onClick={() => onPreview?.(record.id)}
-          style={{ fontWeight: 500, color: '#1677ff' }}
+          style={{ fontWeight: 500, color: PRIMARY[500] }}
         >
           {name}
         </a>
@@ -84,7 +85,7 @@ export function PromptTable({
       width: '30%',
       ellipsis: { showTitle: true },
       render: (text) => (
-        <span style={{ color: '#666' }}>{text || '-'}</span>
+        <span style={{ color: GRAY[500] }}>{text || '-'}</span>
       ),
     },
     {
@@ -94,7 +95,14 @@ export function PromptTable({
       width: 80,
       align: 'center',
       render: (version) => (
-        <Tag color="blue" style={{ margin: 0 }}>
+        <Tag
+          style={{
+            margin: 0,
+            background: PRIMARY[50],
+            color: PRIMARY[600],
+            border: `1px solid ${PRIMARY[200]}`,
+          }}
+        >
           v{version}
         </Tag>
       ),
@@ -114,12 +122,14 @@ export function PromptTable({
             ))}
             {tags.length > 2 && (
               <Tooltip title={tags.slice(2).join(', ')}>
-                <Tag style={{ margin: 0 }}>+{tags.length - 2}</Tag>
+                <Tag style={{ margin: 0, background: GRAY[100], color: GRAY[600] }}>
+                  +{tags.length - 2}
+                </Tag>
               </Tooltip>
             )}
           </Space>
         ) : (
-          <span style={{ color: '#999' }}>-</span>
+          <span style={{ color: GRAY[400] }}>-</span>
         ),
     },
     {
@@ -130,7 +140,7 @@ export function PromptTable({
       sorter: true,
       render: (date) => (
         <Tooltip title={dayjs(date).format('YYYY-MM-DD HH:mm:ss')}>
-          <span style={{ color: '#666' }}>{dayjs(date).fromNow()}</span>
+          <span style={{ color: GRAY[500] }}>{dayjs(date).fromNow()}</span>
         </Tooltip>
       ),
     },
@@ -140,18 +150,22 @@ export function PromptTable({
   const expandedRowRender = (record: PromptItem) => (
     <div
       style={{
-        padding: '8px 0',
+        padding: '12px 16px',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
+        background: GRAY[50],
+        borderRadius: 6,
+        margin: '4px 0',
       }}
     >
-      <span style={{ color: '#999', marginRight: 8 }}>快捷操作:</span>
+      <span style={{ color: GRAY[500], marginRight: 8 }}>快捷操作:</span>
       <Button
         type="text"
         size="small"
         icon={<EditOutlined />}
         onClick={() => onEdit?.(record.id)}
+        style={{ color: PRIMARY[500] }}
       >
         编辑
       </Button>
@@ -160,6 +174,7 @@ export function PromptTable({
         size="small"
         icon={<PlayCircleOutlined />}
         onClick={() => onTest?.(record.id)}
+        style={{ color: PRIMARY[500] }}
       >
         测试
       </Button>
@@ -168,6 +183,7 @@ export function PromptTable({
         size="small"
         icon={<CopyOutlined />}
         onClick={() => onCopy?.(record.id)}
+        style={{ color: PRIMARY[500] }}
       >
         复制
       </Button>
@@ -177,6 +193,11 @@ export function PromptTable({
         onConfirm={() => onDelete?.(record.id)}
         okText="确定"
         cancelText="取消"
+        okButtonProps={{
+          style: {
+            background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+          },
+        }}
       >
         <Button type="text" size="small" danger icon={<DeleteOutlined />}>
           删除

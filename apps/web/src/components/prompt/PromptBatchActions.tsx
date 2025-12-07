@@ -54,7 +54,7 @@ export function PromptBatchActions({
         </Checkbox>
 
         <span style={{ color: '#666' }}>
-          已选择 <span style={{ color: '#1677ff', fontWeight: 500 }}>{selectedCount}</span> 项
+          已选择 <span style={{ color: '#EF4444', fontWeight: 500 }}>{selectedCount}</span> 项
         </span>
 
         <Space size={8}>

@@ -78,7 +78,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const newVersion = prompt.currentVersion + 1
+    // 获取该 prompt 下的最大版本号（考虑所有分支的版本）
+    const maxVersionResult = await prisma.promptVersion.aggregate({
+      where: { promptId: id },
+      _max: { version: true },
+    })
+    const newVersion = (maxVersionResult._max.version || prompt.currentVersion) + 1
 
     // 使用事务创建版本并更新当前版本号
     const version = await prisma.$transaction(async (tx) => {
@@ -86,6 +91,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         data: {
           promptId: id,
           version: newVersion,
+          systemPrompt: prompt.systemPrompt || '',
           content: prompt.content,
           variables: prompt.variables as Prisma.InputJsonValue,
           changeLog: changeLog || null,

@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, description, content, tags } = body
+    const { name, description, systemPrompt, content, tags } = body
 
     if (!name || !content) {
       return NextResponse.json(
@@ -99,8 +99,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 自动提取变量
-    const variables = extractVariables(content)
+    // 自动提取变量（从 systemPrompt 和 content 合并提取）
+    const allContent = `${systemPrompt || ''}\n${content}`
+    const variables = extractVariables(allContent)
     const variablesJson = variables as Prisma.InputJsonValue
 
     // 使用事务创建提示词和第一个版本
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           description: description || null,
+          systemPrompt: systemPrompt || '',
           content,
           variables: variablesJson,
           tags: tags || [],
@@ -121,6 +123,7 @@ export async function POST(request: NextRequest) {
         data: {
           promptId: newPrompt.id,
           version: 1,
+          systemPrompt: systemPrompt || '',
           content,
           variables: variablesJson,
           changeLog: '初始版本',
