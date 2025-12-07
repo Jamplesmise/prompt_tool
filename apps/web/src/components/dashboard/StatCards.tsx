@@ -25,7 +25,7 @@ export function StatCards() {
       title: '提示词数量',
       value: stats?.promptCount ?? 0,
       icon: <FileTextOutlined />,
-      color: '#1677ff',
+      color: '#EF4444',
     },
     {
       title: '数据集数量',

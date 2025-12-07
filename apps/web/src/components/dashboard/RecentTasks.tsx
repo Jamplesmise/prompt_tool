@@ -1,19 +1,22 @@
 'use client'
 
-import { Card, List, Tag, Button, Empty, Spin, Space, Progress } from 'antd'
-import { EyeOutlined, PlayCircleOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Card, List, Button, Empty, Spin, Space, Progress } from 'antd'
+import { EyeOutlined, PlayCircleOutlined, ClockCircleOutlined, UnorderedListOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import { useRecentTasks } from '@/hooks/useStats'
+import { StatusBadge } from '@/components/common'
+import type { StatusType } from '@/components/common'
 import type { TaskStatus, TaskListItem } from '@/services/stats'
+import { PRIMARY } from '@/theme/colors'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
-// 任务状态标签颜色
-const statusColorMap: Record<TaskStatus, string> = {
+// 任务状态映射到 StatusBadge 类型
+const statusTypeMap: Record<TaskStatus, StatusType> = {
   PENDING: 'default',
   RUNNING: 'processing',
   COMPLETED: 'success',
@@ -51,6 +54,7 @@ export function RecentTasks() {
             type="link"
             icon={<EyeOutlined />}
             onClick={() => router.push(`/tasks/${task.id}`)}
+            style={{ color: PRIMARY[500] }}
           >
             查看
           </Button>,
@@ -59,17 +63,19 @@ export function RecentTasks() {
         <List.Item.Meta
           title={
             <Space>
-              <span>{task.name}</span>
-              <Tag color={statusColorMap[task.status]}>
-                {statusTextMap[task.status]}
-              </Tag>
+              <span className="font-medium">{task.name}</span>
+              <StatusBadge
+                status={statusTypeMap[task.status]}
+                text={statusTextMap[task.status]}
+                dot={task.status === 'RUNNING'}
+              />
             </Space>
           }
           description={
             <Space direction="vertical" size={4} className="w-full">
               <Space size="middle">
                 {task.stats.passRate != null && (
-                  <span className="text-green-600">
+                  <span style={{ color: '#10B981' }}>
                     通过率: {(task.stats.passRate * 100).toFixed(0)}%
                   </span>
                 )}
@@ -83,6 +89,7 @@ export function RecentTasks() {
                   percent={progressPercent}
                   size="small"
                   status="active"
+                  strokeColor={PRIMARY[500]}
                   format={() => `${progress.completed}/${progress.total}`}
                 />
               )}
@@ -95,9 +102,14 @@ export function RecentTasks() {
 
   return (
     <Card
-      title="最近任务"
+      title={
+        <span className="flex items-center gap-2">
+          <UnorderedListOutlined style={{ color: PRIMARY[500] }} />
+          最近任务
+        </span>
+      }
       extra={
-        <Button type="link" onClick={() => router.push('/tasks')}>
+        <Button type="link" onClick={() => router.push('/tasks')} style={{ color: PRIMARY[500] }}>
           查看全部
         </Button>
       }
@@ -122,8 +134,9 @@ export function RecentTasks() {
             icon={<PlayCircleOutlined />}
             onClick={() => router.push('/tasks/new')}
             style={{
-              background: 'linear-gradient(135deg, #1677FF, #69B1FF)',
+              background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
               border: 'none',
+              boxShadow: `0 4px 12px ${PRIMARY[500]}40`,
             }}
           >
             创建任务

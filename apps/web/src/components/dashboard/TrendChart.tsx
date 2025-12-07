@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Card, Segmented, Spin, Empty, DatePicker, Space } from 'antd'
+import { LineChartOutlined } from '@ant-design/icons'
 import {
   LineChart,
   Line,
@@ -14,6 +15,7 @@ import {
 } from 'recharts'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
+import { PRIMARY, SEMANTIC, GRAY } from '@/theme/colors'
 
 const { RangePicker } = DatePicker
 
@@ -34,10 +36,11 @@ type TrendChartProps = {
   height?: number
 }
 
+// 使用品牌色系
 const COLORS = {
-  executed: '#1677FF',
-  passed: '#52C41A',
-  failed: '#FF4D4F',
+  executed: PRIMARY[500],      // 品牌主色
+  passed: SEMANTIC.success,    // 语义成功色
+  failed: SEMANTIC.error,      // 语义错误色
 }
 
 const TIME_OPTIONS = [
@@ -108,8 +111,8 @@ export function TrendChart({
   return (
     <Card
       title={
-        <span>
-          <span className="mr-2">📊</span>
+        <span className="flex items-center gap-2">
+          <LineChartOutlined style={{ color: PRIMARY[500] }} />
           执行趋势
         </span>
       }
@@ -158,26 +161,26 @@ export function TrendChart({
             data={data}
             margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <CartesianGrid strokeDasharray="3 3" stroke={GRAY[100]} />
             <XAxis
               dataKey="date"
-              axisLine={{ stroke: '#d9d9d9' }}
+              axisLine={{ stroke: GRAY[200] }}
               tickLine={false}
-              tick={{ fill: '#8c8c8c', fontSize: 12 }}
+              tick={{ fill: GRAY[500], fontSize: 12 }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#8c8c8c', fontSize: 12 }}
+              tick={{ fill: GRAY[500], fontSize: 12 }}
               allowDecimals={false}
             />
             <Tooltip
               contentStyle={{
                 borderRadius: 8,
-                border: '1px solid #f0f0f0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                border: `1px solid ${GRAY[100]}`,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
               }}
-              labelStyle={{ color: '#262626', fontWeight: 500 }}
+              labelStyle={{ color: GRAY[800], fontWeight: 500 }}
             />
             <Legend
               wrapperStyle={{ paddingTop: 16 }}
@@ -190,8 +193,8 @@ export function TrendChart({
               name="执行数"
               stroke={COLORS.executed}
               strokeWidth={2}
-              dot={{ r: 3, fill: COLORS.executed }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 4, fill: COLORS.executed, strokeWidth: 0 }}
+              activeDot={{ r: 6, stroke: COLORS.executed, strokeWidth: 2, fill: '#fff' }}
             />
             <Line
               type="monotone"
@@ -199,8 +202,8 @@ export function TrendChart({
               name="通过数"
               stroke={COLORS.passed}
               strokeWidth={2}
-              dot={{ r: 3, fill: COLORS.passed }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 4, fill: COLORS.passed, strokeWidth: 0 }}
+              activeDot={{ r: 6, stroke: COLORS.passed, strokeWidth: 2, fill: '#fff' }}
             />
             <Line
               type="monotone"
@@ -208,8 +211,8 @@ export function TrendChart({
               name="失败数"
               stroke={COLORS.failed}
               strokeWidth={2}
-              dot={{ r: 3, fill: COLORS.failed }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 4, fill: COLORS.failed, strokeWidth: 0 }}
+              activeDot={{ r: 6, stroke: COLORS.failed, strokeWidth: 2, fill: '#fff' }}
             />
           </LineChart>
         </ResponsiveContainer>

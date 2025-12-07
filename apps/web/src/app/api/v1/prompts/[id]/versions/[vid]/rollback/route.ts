@@ -42,7 +42,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    const newVersionNumber = prompt.currentVersion + 1
+    // 获取该 prompt 下的最大版本号（考虑分支创建的版本）
+    const maxVersionResult = await prisma.promptVersion.aggregate({
+      where: { promptId: id },
+      _max: { version: true },
+    })
+    const newVersionNumber = (maxVersionResult._max.version || prompt.currentVersion) + 1
 
     // 使用事务：创建新版本并更新提示词内容
     const result = await prisma.$transaction(async (tx) => {

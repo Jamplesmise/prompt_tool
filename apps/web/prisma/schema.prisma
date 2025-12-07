@@ -46,6 +46,9 @@ model User {
   mergedBranches  PromptBranch[]   @relation("BranchMergedBy")
   datasetVersions DatasetVersion[]
 
+  // Phase 4: 任务模板
+  taskTemplates TaskTemplate[]
+
   @@map("users")
 }
 
@@ -62,6 +65,7 @@ model Prompt {
   id             String   @id @default(uuid())
   name           String
   description    String?
+  systemPrompt   String?  @default("") @map("system_prompt")
   content        String
   variables      Json     @default("[]")
   tags           String[] @default([])
@@ -133,10 +137,11 @@ model PromptVersion {
   promptId String @map("prompt_id")
   prompt   Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
-  version   Int
-  content   String
-  variables Json    @default("[]")
-  changeLog String? @map("change_log")
+  version      Int
+  systemPrompt String? @default("") @map("system_prompt")
+  content      String
+  variables    Json    @default("[]")
+  changeLog    String? @map("change_log")
 
   // Phase 10: 分支关联
   branchId String?       @map("branch_id")
@@ -758,6 +763,9 @@ model Team {
   alertRules     AlertRule[]
   notifyChannels NotifyChannel[]
 
+  // Phase 4: 任务模板
+  taskTemplates TaskTemplate[]
+
   @@index([ownerId])
   @@map("teams")
 }
@@ -832,4 +840,34 @@ model AuditLog {
   @@index([resource])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================
+// 任务模板模块
+// ============================================
+
+model TaskTemplate {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  // 任务配置 JSON，包含 promptId, promptVersionId, modelId, datasetId, evaluatorIds 等
+  config Json
+
+  isPublic   Boolean @default(false) @map("is_public") // 是否团队共享
+  usageCount Int     @default(0) @map("usage_count")
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([isPublic])
+  @@map("task_templates")
 }

@@ -46,7 +46,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div>
+    <div className="fade-in">
       {/* 页面标题 */}
       <div style={{ marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>
@@ -80,7 +80,7 @@ export default function TasksPage() {
           {/* 任务卡片网格 */}
           <Row gutter={[16, 16]}>
             {tasks.map((task) => (
-              <Col key={task.id} xs={24} lg={12} xl={8}>
+              <Col key={task.id} xs={24} sm={24} md={12} lg={12} xl={8}>
                 <TaskCard
                   id={task.id}
                   name={task.name}

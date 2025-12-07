@@ -7,9 +7,9 @@ import type { SelectProps } from 'antd'
 const TAG_COLORS: Record<string, string> = {
   '生产': '#52C41A',
   '测试': '#FAAD14',
-  '开发': '#1677FF',
+  '开发': '#EF4444',
   '归档': '#8c8c8c',
-  'default': '#1677FF',
+  'default': '#EF4444',
 }
 
 type TagSelectProps = {

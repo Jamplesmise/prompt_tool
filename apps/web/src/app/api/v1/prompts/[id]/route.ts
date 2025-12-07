@@ -57,7 +57,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
     const body = await request.json()
-    const { name, description, content, tags, variables: inputVariables } = body
+    const { name, description, systemPrompt, content, tags, variables: inputVariables } = body
 
     const existingPrompt = await prisma.prompt.findUnique({
       where: { id },
@@ -70,11 +70,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 如果内容更新，重新提取并合并变量
+    // 如果内容更新，重新提取并合并变量（从 systemPrompt 和 content 合并提取）
     type VariableType = { name: string; type: 'string' | 'number' | 'boolean' | 'json'; required?: boolean; description?: string; defaultValue?: unknown }
     let variables = existingPrompt.variables as VariableType[]
-    if (content !== undefined) {
-      const newVariableNames = extractVariableNames(content)
+    const finalSystemPrompt = systemPrompt !== undefined ? systemPrompt : existingPrompt.systemPrompt
+    const finalContent = content !== undefined ? content : existingPrompt.content
+    if (content !== undefined || systemPrompt !== undefined) {
+      const allContent = `${finalSystemPrompt || ''}\n${finalContent}`
+      const newVariableNames = extractVariableNames(allContent)
       variables = mergeVariables(
         inputVariables || variables,
         newVariableNames
@@ -86,6 +89,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: {
         ...(name !== undefined && { name }),
         ...(description !== undefined && { description }),
+        ...(systemPrompt !== undefined && { systemPrompt }),
         ...(content !== undefined && { content }),
         ...(tags !== undefined && { tags }),
         variables: variables as Prisma.InputJsonValue,

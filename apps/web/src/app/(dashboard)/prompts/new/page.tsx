@@ -2,22 +2,28 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button, Card, Form, Input, Space, Typography, Row, Col } from 'antd'
-import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons'
+import { Button, Form, Input, Space, Typography, Row, Col } from 'antd'
+import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, EditOutlined, TagsOutlined, RobotOutlined } from '@ant-design/icons'
 import { PromptEditor, VariableList } from '@/components/prompt'
+import { FormSection } from '@/components/common'
 import { useCreatePrompt } from '@/hooks/usePrompts'
 import { extractVariables } from '@/lib/template'
 
-const { Title, Text } = Typography
+const { Title } = Typography
 const { TextArea } = Input
 
 export default function NewPromptPage() {
   const router = useRouter()
   const [form] = Form.useForm()
+  const [systemPrompt, setSystemPrompt] = useState('')
   const [content, setContent] = useState('')
   const createPrompt = useCreatePrompt()
 
-  const variables = useMemo(() => extractVariables(content), [content])
+  // 从系统提示词和用户提示词中合并提取变量
+  const variables = useMemo(() => {
+    const allContent = `${systemPrompt}\n${content}`
+    return extractVariables(allContent)
+  }, [systemPrompt, content])
 
   const handleSave = async () => {
     try {
@@ -25,6 +31,7 @@ export default function NewPromptPage() {
       const prompt = await createPrompt.mutateAsync({
         name: values.name,
         description: values.description,
+        systemPrompt,
         content,
         tags: values.tags?.split(',').map((t: string) => t.trim()).filter(Boolean) || [],
       })
@@ -55,40 +62,66 @@ export default function NewPromptPage() {
         </Button>
       </div>
 
-      <Row gutter={24}>
-        <Col span={16}>
-          <Card title="基本信息" style={{ marginBottom: 16 }}>
-            <Form form={form} layout="vertical">
-              <Form.Item
-                name="name"
-                label="名称"
-                rules={[{ required: true, message: '请输入提示词名称' }]}
-              >
-                <Input placeholder="输入提示词名称" />
-              </Form.Item>
+      <Form form={form} layout="vertical">
+        <Row gutter={24}>
+          <Col span={16}>
+            <FormSection
+              title="基本信息"
+              icon={<InfoCircleOutlined />}
+              description="设置提示词的名称、描述和标签"
+            >
+              <Row gutter={16}>
+                <Col span={16}>
+                  <Form.Item
+                    name="name"
+                    label="名称"
+                    rules={[{ required: true, message: '请输入提示词名称' }]}
+                  >
+                    <Input placeholder="输入提示词名称" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item name="tags" label="标签">
+                    <Input placeholder="多个用逗号分隔" />
+                  </Form.Item>
+                </Col>
+              </Row>
               <Form.Item name="description" label="描述">
-                <TextArea placeholder="输入提示词描述（可选）" rows={2} />
+                <TextArea placeholder="输入提示词描述（可选）" rows={2} showCount maxLength={200} />
               </Form.Item>
-              <Form.Item name="tags" label="标签">
-                <Input placeholder="输入标签，多个用逗号分隔" />
-              </Form.Item>
-            </Form>
-          </Card>
+            </FormSection>
 
-          <Card title="提示词内容">
-            <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
-              使用 {'{{变量名}}'} 格式定义变量，如 {'{{role}}'}, {'{{question}}'}
-            </Text>
-            <PromptEditor value={content} onChange={setContent} height={400} />
-          </Card>
-        </Col>
+            <FormSection
+              title="系统提示词"
+              icon={<RobotOutlined />}
+              description="定义 AI 的角色和行为规范（可选）"
+              collapsible
+              defaultExpanded={false}
+            >
+              <PromptEditor
+                value={systemPrompt}
+                onChange={setSystemPrompt}
+                height={200}
+                title="System Prompt"
+              />
+            </FormSection>
 
-        <Col span={8}>
-          <Card title="变量列表">
-            <VariableList variables={variables} />
-          </Card>
-        </Col>
-      </Row>
+            <FormSection
+              title="用户提示词"
+              icon={<EditOutlined />}
+              description="使用 {{变量名}} 格式定义变量，如 {{role}}, {{question}}"
+            >
+              <PromptEditor value={content} onChange={setContent} height={350} title="User Prompt" />
+            </FormSection>
+          </Col>
+
+          <Col span={8}>
+            <FormSection title="变量列表" icon={<TagsOutlined />}>
+              <VariableList variables={variables} />
+            </FormSection>
+          </Col>
+        </Row>
+      </Form>
     </div>
   )
 }

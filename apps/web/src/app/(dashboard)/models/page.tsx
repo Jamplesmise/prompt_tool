@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Button, Spin, Empty, Typography, Table, Tag, Space, Select, Input, Popconfirm, Tooltip, Card } from 'antd'
 import { PlusOutlined, SearchOutlined, ThunderboltOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, ApiOutlined } from '@ant-design/icons'
+import { PRIMARY, GRAY } from '@/theme/colors'
 import type { ColumnsType } from 'antd/es/table'
 import { useProviders, useDeleteModel } from '@/hooks/useModels'
 import { useModelTest } from '@/hooks/useModelTest'
@@ -16,6 +17,7 @@ import {
 } from '@/components/model'
 import type { ConnectionState } from '@/components/model'
 import type { ProviderWithModels, ModelPricing } from '@/services/models'
+import { ModelConfiguredTip } from '@/components/guidance'
 
 const { Title } = Typography
 
@@ -178,7 +180,7 @@ export default function ModelsPage() {
       render: (name: string, record) => (
         <Space direction="vertical" size={0}>
           <span style={{ fontWeight: 500 }}>{name}</span>
-          <span style={{ fontSize: 12, color: '#999' }}>{record.modelId}</span>
+          <span style={{ fontSize: 12, color: GRAY[400] }}>{record.modelId}</span>
         </Space>
       ),
     },
@@ -213,7 +215,7 @@ export default function ModelsPage() {
       key: 'config',
       width: 180,
       render: (_, record) => {
-        if (!record.config) return <span style={{ color: '#999' }}>-</span>
+        if (!record.config) return <span style={{ color: GRAY[400] }}>-</span>
         return (
           <Space size={8}>
             {record.config.temperature !== undefined && (
@@ -299,7 +301,7 @@ export default function ModelsPage() {
   }
 
   return (
-    <div>
+    <div className="fade-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <Title level={4} style={{ margin: 0 }}>
           模型配置
@@ -321,17 +323,25 @@ export default function ModelsPage() {
                 setAddProviderOpen(true)
               }
             }}
+            style={{
+              background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+              border: 'none',
+              boxShadow: `0 2px 8px ${PRIMARY[500]}40`,
+            }}
           >
             添加模型
           </Button>
         </Space>
       </div>
 
+      {/* 模型配置后的提示 */}
+      <ModelConfiguredTip />
+
       {/* 筛选栏 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space wrap size={16}>
           <Space>
-            <span style={{ color: '#666' }}>提供商:</span>
+            <span style={{ color: GRAY[500] }}>提供商:</span>
             <Select
               allowClear
               placeholder="全部"
@@ -342,7 +352,7 @@ export default function ModelsPage() {
             />
           </Space>
           <Space>
-            <span style={{ color: '#666' }}>状态:</span>
+            <span style={{ color: GRAY[500] }}>状态:</span>
             <Select
               allowClear
               placeholder="全部"
@@ -359,13 +369,13 @@ export default function ModelsPage() {
           </Space>
           <Input
             placeholder="搜索模型名称/ID/提供商"
-            prefix={<SearchOutlined style={{ color: '#999' }} />}
+            prefix={<SearchOutlined style={{ color: GRAY[400] }} />}
             style={{ width: 220 }}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             allowClear
           />
-          <span style={{ color: '#999', fontSize: 12 }}>
+          <span style={{ color: GRAY[400], fontSize: 12 }}>
             共 {filteredModels.length} / {flatModels.length} 个模型
           </span>
         </Space>
@@ -377,7 +387,15 @@ export default function ModelsPage() {
           description="暂无模型"
           style={{ padding: '100px 0' }}
         >
-          <Button type="primary" onClick={() => setAddProviderOpen(true)}>
+          <Button
+            type="primary"
+            onClick={() => setAddProviderOpen(true)}
+            style={{
+              background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+              border: 'none',
+              boxShadow: `0 2px 8px ${PRIMARY[500]}40`,
+            }}
+          >
             添加第一个提供商
           </Button>
         </Empty>

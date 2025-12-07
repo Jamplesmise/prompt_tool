@@ -14,6 +14,8 @@ import {
   ClockCircleOutlined,
   MonitorOutlined,
   AlertOutlined,
+  SwapOutlined,
+  BarChartOutlined,
 } from '@ant-design/icons'
 import type { ProLayoutProps } from '@ant-design/pro-components'
 import { ProLayout } from '@ant-design/pro-components'
@@ -27,6 +29,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { Breadcrumb } from '@/components/common'
 import { TeamSelector } from '@/components/team/TeamSelector'
 import { GlobalHotkeys } from '@/components/global'
+import { TaskCompleteNotification } from '@/components/guidance'
 
 const menuData = [
   {
@@ -58,6 +61,23 @@ const menuData = [
     path: '/tasks',
     name: '测试任务',
     icon: <PlayCircleOutlined />,
+  },
+  {
+    path: '/comparison',
+    name: '对比分析',
+    icon: <SwapOutlined />,
+    routes: [
+      {
+        path: '/comparison/versions',
+        name: '版本对比',
+        icon: <FileTextOutlined />,
+      },
+      {
+        path: '/comparison/models',
+        name: '模型对比',
+        icon: <BarChartOutlined />,
+      },
+    ],
   },
   {
     path: '/scheduled',
@@ -160,6 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProLayout {...layoutSettings}>
       <GlobalHotkeys />
+      <TaskCompleteNotification />
       <div className="px-6 py-4" style={{ fontSize: `${fontSize}px` }}>
         <Breadcrumb />
         {children}

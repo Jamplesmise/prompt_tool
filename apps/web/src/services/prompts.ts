@@ -103,6 +103,7 @@ type TestPromptResult = {
 type CreatePromptInput = {
   name: string
   description?: string
+  systemPrompt?: string
   content: string
   tags?: string[]
 }
@@ -111,6 +112,7 @@ type CreatePromptInput = {
 type UpdatePromptInput = {
   name?: string
   description?: string
+  systemPrompt?: string
   content?: string
   tags?: string[]
   variables?: PromptVariable[]

@@ -24,7 +24,7 @@ export function StatCard({
   title,
   value,
   trend,
-  iconBgColor = '#1677FF',
+  iconBgColor = '#EF4444',
   iconBgColorEnd,
   onClick,
   loading = false,

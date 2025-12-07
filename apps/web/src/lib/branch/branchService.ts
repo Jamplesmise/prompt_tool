@@ -48,6 +48,13 @@ export async function createBranch(params: CreateBranchParams) {
     throw new Error('分支名称已存在')
   }
 
+  // 获取该 prompt 下的最大版本号
+  const maxVersionResult = await prisma.promptVersion.aggregate({
+    where: { promptId },
+    _max: { version: true },
+  })
+  const nextVersion = (maxVersionResult._max.version || 0) + 1
+
   // 使用事务创建分支和第一个版本
   const branch = await prisma.$transaction(async (tx) => {
     // 创建分支
@@ -57,7 +64,7 @@ export async function createBranch(params: CreateBranchParams) {
         name,
         description,
         sourceVersionId,
-        currentVersion: 1,
+        currentVersion: nextVersion,
         isDefault: false,
         status: 'ACTIVE',
         createdById,
@@ -65,11 +72,12 @@ export async function createBranch(params: CreateBranchParams) {
     })
 
     // 创建分支的第一个版本（复制源版本内容）
+    // 注意：版本号在 promptId 范围内必须唯一，所以使用全局递增的版本号
     await tx.promptVersion.create({
       data: {
         promptId,
         branchId: newBranch.id,
-        version: 1,
+        version: nextVersion,
         content: sourceVersion.content,
         variables: sourceVersion.variables as Prisma.InputJsonValue,
         changeLog: `从 v${sourceVersion.version} 创建分支`,
@@ -247,7 +255,12 @@ export async function publishBranchVersion(
     throw new Error('只能在活跃分支上发布版本')
   }
 
-  const newVersion = branch.currentVersion + 1
+  // 获取该 prompt 下的最大版本号（考虑所有分支的版本）
+  const maxVersionResult = await prisma.promptVersion.aggregate({
+    where: { promptId },
+    _max: { version: true },
+  })
+  const newVersion = (maxVersionResult._max.version || branch.currentVersion) + 1
 
   return prisma.$transaction(async (tx) => {
     // 创建新版本

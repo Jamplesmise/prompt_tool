@@ -1,52 +1,67 @@
 'use client'
 
-import { Row, Col, Typography } from 'antd'
+import { Row, Col, Typography, Button } from 'antd'
 import {
   FileTextOutlined,
   DatabaseOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons'
+import { Rocket } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { StatCard, QuickStart, RecentTasks, TrendChart } from '@/components/dashboard'
+import { StatCard } from '@/components/common'
+import { QuickStart, RecentTasks, TrendChart } from '@/components/dashboard'
+import { OnboardingWrapper } from '@/components/onboarding'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { useOnboarding } from '@/hooks/useOnboarding'
 
 const { Title } = Typography
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { canRestartOnboarding, resetOnboarding } = useOnboarding()
   const {
     promptCount,
     datasetCount,
     weeklyTaskCount,
     passRate,
     trendData,
-    recentTasks,
     overviewLoading,
     trendsLoading,
-    recentTasksLoading,
     timeRange,
     setTimeRange,
   } = useDashboardStats()
 
   const passRateDisplay = passRate != null ? `${(passRate * 100).toFixed(1)}%` : '-'
-  const passRateColor = passRate != null && passRate >= 0.8 ? '#52C41A' : '#FAAD14'
 
   return (
-    <div>
-      <Title level={4} className="!mb-6">
-        工作台
-      </Title>
+    <div className="fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <Title level={4} className="!mb-0">
+          工作台
+        </Title>
+        {canRestartOnboarding && (
+          <Button
+            type="text"
+            icon={<Rocket size={16} />}
+            onClick={resetOnboarding}
+          >
+            重新开始引导
+          </Button>
+        )}
+      </div>
+
+      {/* 新用户引导弹窗 */}
+      <OnboardingWrapper />
 
       {/* 统计卡片行 */}
-      <Row gutter={[16, 16]}>
+      <Row gutter={[24, 24]}>
         <Col xs={24} sm={12} lg={6}>
           <StatCard
             icon={<FileTextOutlined />}
-            title="提示词数量"
+            iconBg="primary"
+            title="提示词总数"
             value={promptCount}
-            iconBgColor="#1677FF"
-            iconBgColorEnd="#69B1FF"
             onClick={() => router.push('/prompts')}
             loading={overviewLoading}
           />
@@ -54,10 +69,9 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <StatCard
             icon={<DatabaseOutlined />}
-            title="数据集数量"
+            iconBg="success"
+            title="数据集总数"
             value={datasetCount}
-            iconBgColor="#52C41A"
-            iconBgColorEnd="#95DE64"
             onClick={() => router.push('/datasets')}
             loading={overviewLoading}
           />
@@ -65,10 +79,9 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <StatCard
             icon={<ThunderboltOutlined />}
+            iconBg="warning"
             title="本周任务数"
             value={weeklyTaskCount}
-            iconBgColor="#FAAD14"
-            iconBgColorEnd="#FFD666"
             onClick={() => router.push('/tasks')}
             loading={overviewLoading}
           />
@@ -76,10 +89,9 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <StatCard
             icon={<CheckCircleOutlined />}
+            iconBg="info"
             title="平均通过率"
             value={passRateDisplay}
-            iconBgColor={passRateColor}
-            iconBgColorEnd={passRate != null && passRate >= 0.8 ? '#95DE64' : '#FFD666'}
             loading={overviewLoading}
           />
         </Col>
@@ -87,10 +99,10 @@ export default function DashboardPage() {
 
       {/* 快速开始 + 最近任务 */}
       <Row gutter={[16, 16]} className="mt-4">
-        <Col xs={24} lg={10}>
+        <Col xs={24} md={24} lg={10}>
           <QuickStart />
         </Col>
-        <Col xs={24} lg={14}>
+        <Col xs={24} md={24} lg={14}>
           <RecentTasks />
         </Col>
       </Row>

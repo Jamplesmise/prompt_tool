@@ -186,7 +186,7 @@
 .fontSizeNum {
   min-width: 2.5em;
   text-align: right;
-  color: #1677ff;
+  color: var(--color-primary, #EF4444);
   font-weight: 500;
 }
 

@@ -1,15 +1,17 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import { useState, useCallback } from 'react'
 import { Input, Button, Space, Select } from 'antd'
 import { SearchOutlined, PlusOutlined } from '@ant-design/icons'
 import { useDebouncedCallback } from 'use-debounce'
+import { PRIMARY } from '@/theme/colors'
 
 // 标签颜色映射
 const TAG_COLORS: Record<string, string> = {
   '生产': '#52C41A',
   '测试': '#FAAD14',
-  '开发': '#1677FF',
+  '开发': PRIMARY[500],
   '归档': '#8c8c8c',
 }
 
@@ -68,7 +70,7 @@ export function PromptFilters({
           prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
           value={searchInput}
           onChange={handleSearchChange}
-          style={{ width: 280 }}
+          style={{ width: 280, height: 40 }}
           allowClear
           onClear={() => {
             setSearchInput('')
@@ -82,30 +84,32 @@ export function PromptFilters({
           value={value.tags || []}
           onChange={handleTagsChange}
           options={tagOptions}
-          style={{ minWidth: 160 }}
+          style={{ minWidth: 120, height: 40 }}
           allowClear
-          maxTagCount={2}
+          maxTagCount={1}
+          maxTagPlaceholder={(omittedValues) => `+${omittedValues.length}`}
           tagRender={({ label, closable, onClose }) => {
-            const color = TAG_COLORS[label as string] || '#1677FF'
+            const color = TAG_COLORS[label as string] || '#EF4444'
             return (
               <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  padding: '0 7px',
-                  marginRight: 4,
+                  padding: '0 6px',
+                  marginRight: 3,
                   borderRadius: 4,
-                  backgroundColor: `${color}20`,
+                  backgroundColor: `${color}15`,
                   color: color,
                   fontSize: 12,
-                  lineHeight: '20px',
+                  lineHeight: '22px',
+                  height: 22,
                 }}
               >
                 {label}
                 {closable && (
                   <span
                     onClick={onClose}
-                    style={{ marginLeft: 4, cursor: 'pointer' }}
+                    style={{ marginLeft: 4, cursor: 'pointer', opacity: 0.7 }}
                   >
                     ×
                   </span>
@@ -120,9 +124,11 @@ export function PromptFilters({
           icon={<PlusOutlined />}
           onClick={onCreatePrompt}
           style={{
-            background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
-            border: 'none',
+            height: 40,
             fontWeight: 500,
+            background: `linear-gradient(135deg, ${PRIMARY[400]} 0%, ${PRIMARY[500]} 50%, ${PRIMARY[600]} 100%)`,
+            border: 'none',
+            boxShadow: `0 2px 8px ${PRIMARY[500]}40`,
           }}
         >
           新建提示词

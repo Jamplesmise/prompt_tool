@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Form,
@@ -15,12 +15,20 @@ import {
   Divider,
   Alert,
   Spin,
+  Dropdown,
 } from 'antd'
+import type { MenuProps } from 'antd'
+import { FileTextOutlined, SaveOutlined, DownOutlined } from '@ant-design/icons'
 import { usePrompts } from '@/hooks/usePrompts'
 import { useModels } from '@/hooks/useModels'
 import { useDatasets } from '@/hooks/useDatasets'
 import { useEvaluators } from '@/hooks/useEvaluators'
 import { useCreateTask } from '@/hooks/useTasks'
+import { EvaluatorRecommendHint } from '@/components/analysis/EvaluatorRecommend'
+import { extractPromptFeatures, extractDatasetFeaturesFromColumns, matchEvaluators } from '@/lib/recommendation'
+import { SaveTemplateModal, TemplateSelector } from '@/components/templates'
+import type { TemplateConfig } from '@/hooks/useTemplates'
+import type { MatchResult } from '@/lib/recommendation'
 import type { CreateTaskInput } from '@/services/tasks'
 
 const { Title, Text } = Typography
@@ -43,6 +51,10 @@ export function CreateTaskForm() {
   const [currentStep, setCurrentStep] = useState(0)
   const [form] = Form.useForm<FormData>()
 
+  // 模板相关状态
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+
   // 加载选项数据
   const { data: promptsData, isLoading: promptsLoading } = usePrompts({ pageSize: 100 })
   const { data: modelsData, isLoading: modelsLoading } = useModels()
@@ -63,6 +75,8 @@ export function CreateTaskForm() {
   const [promptVersions, setPromptVersions] = useState<
     Record<string, Array<{ id: string; version: number }>>
   >({})
+  // 评估器推荐结果
+  const [evaluatorMatchResult, setEvaluatorMatchResult] = useState<MatchResult | null>(null)
 
   // 当选中提示词变化时，加载版本
   useEffect(() => {
@@ -112,6 +126,160 @@ export function CreateTaskForm() {
       return existing || { promptId: id, versionId: '' }
     })
     form.setFieldValue('promptSelections', newSelections)
+  }
+
+  // 当进入评估配置步骤时，生成评估器推荐
+  useEffect(() => {
+    if (currentStep !== 2) return
+    if (selectedPromptIds.length === 0) return
+
+    const generateRecommendation = async () => {
+      try {
+        // 获取选中的提示词内容（从 API 获取）
+        let promptContent = ''
+        const promptId = selectedPromptIds[0]
+        try {
+          const response = await fetch(`/api/v1/prompts/${promptId}`)
+          const data = await response.json()
+          if (data.code === 200 && data.data?.content) {
+            promptContent = data.data.content
+          }
+        } catch {
+          // 获取失败时跳过
+        }
+
+        if (!promptContent) return
+
+        // 提取提示词特征
+        const promptFeatures = extractPromptFeatures(promptContent)
+
+        // 获取数据集信息
+        const datasetId = form.getFieldValue('datasetId')
+        const dataset = datasetsData?.list?.find(d => d.id === datasetId)
+
+        // 提取数据集特征（使用基本信息）
+        const datasetFeatures = extractDatasetFeaturesFromColumns(
+          [], // 列信息需要单独获取，这里简化处理
+          [],
+          dataset?.rowCount || 0
+        )
+
+        // 匹配评估器
+        const matchResult = matchEvaluators(promptFeatures, datasetFeatures)
+        setEvaluatorMatchResult(matchResult)
+      } catch (err) {
+        console.error('Failed to generate evaluator recommendation:', err)
+      }
+    }
+
+    generateRecommendation()
+  }, [currentStep, selectedPromptIds, datasetsData, form])
+
+  // 从模板应用配置
+  const handleApplyTemplate = (config: TemplateConfig) => {
+    // 应用提示词配置
+    if (config.promptId) {
+      setSelectedPromptIds([config.promptId])
+      if (config.promptVersionId) {
+        form.setFieldValue('promptSelections', [
+          { promptId: config.promptId, versionId: config.promptVersionId }
+        ])
+      }
+    }
+
+    // 应用模型配置
+    if (config.modelId) {
+      form.setFieldValue('modelIds', [config.modelId])
+    }
+
+    // 应用数据集配置
+    if (config.datasetId) {
+      form.setFieldValue('datasetId', config.datasetId)
+    }
+
+    // 应用评估器配置
+    if (config.evaluatorIds?.length) {
+      form.setFieldValue('evaluatorIds', config.evaluatorIds)
+    }
+
+    // 应用采样配置（如有）
+    if (config.samplingConfig) {
+      // 当前表单暂不支持采样配置，可在后续扩展
+    }
+  }
+
+  // 获取当前表单配置用于保存模板
+  const getCurrentConfig = (): TemplateConfig => {
+    const values = form.getFieldsValue(true)
+    const config: TemplateConfig = {}
+
+    // 提示词配置（仅保存第一个）
+    if (values.promptSelections?.length > 0) {
+      config.promptId = values.promptSelections[0].promptId
+      config.promptVersionId = values.promptSelections[0].versionId
+    }
+
+    // 模型配置（仅保存第一个）
+    if (values.modelIds?.length > 0) {
+      config.modelId = values.modelIds[0]
+    }
+
+    // 数据集配置
+    if (values.datasetId) {
+      config.datasetId = values.datasetId
+    }
+
+    // 评估器配置
+    if (values.evaluatorIds?.length > 0) {
+      config.evaluatorIds = values.evaluatorIds
+    }
+
+    // 采样配置
+    config.samplingConfig = {
+      type: 'all',
+    }
+
+    return config
+  }
+
+  // 应用评估器推荐
+  const handleApplyRecommendation = () => {
+    if (!evaluatorMatchResult) return
+
+    // 根据推荐的评估器类型，找到对应的评估器 ID
+    const recommendedTypes = new Set(evaluatorMatchResult.recommendations.map(r => r.evaluatorId))
+    const matchedEvaluatorIds: string[] = []
+
+    // 简单映射：根据评估器名称或类型匹配
+    for (const evaluator of evaluatorsData || []) {
+      const evaluatorType = evaluator.type.toLowerCase()
+      const evaluatorName = evaluator.name.toLowerCase()
+
+      // JSON 相关
+      if (recommendedTypes.has('json_valid') && (evaluatorName.includes('json') || evaluatorType.includes('json'))) {
+        matchedEvaluatorIds.push(evaluator.id)
+      }
+      // 关键词相关
+      if (recommendedTypes.has('keyword_include') && (evaluatorName.includes('关键') || evaluatorName.includes('keyword') || evaluatorName.includes('包含'))) {
+        matchedEvaluatorIds.push(evaluator.id)
+      }
+      // 长度相关
+      if (recommendedTypes.has('length_range') && (evaluatorName.includes('长度') || evaluatorName.includes('length'))) {
+        matchedEvaluatorIds.push(evaluator.id)
+      }
+      // 相似度相关
+      if (recommendedTypes.has('similarity') && (evaluatorName.includes('相似') || evaluatorName.includes('similarity'))) {
+        matchedEvaluatorIds.push(evaluator.id)
+      }
+      // LLM 评估
+      if (recommendedTypes.has('llm') && (evaluatorType === 'llm' || evaluatorName.includes('llm'))) {
+        matchedEvaluatorIds.push(evaluator.id)
+      }
+    }
+
+    if (matchedEvaluatorIds.length > 0) {
+      form.setFieldValue('evaluatorIds', [...new Set(matchedEvaluatorIds)])
+    }
   }
 
   const handleSubmit = async () => {
@@ -280,6 +448,12 @@ export function CreateTaskForm() {
       content: (
         <Card>
           <Spin spinning={evaluatorsLoading}>
+            {/* 智能推荐提示 */}
+            <EvaluatorRecommendHint
+              matchResult={evaluatorMatchResult}
+              onClick={handleApplyRecommendation}
+            />
+
             <Form.Item
               name="evaluatorIds"
               label="选择评估器"
@@ -371,9 +545,32 @@ export function CreateTaskForm() {
     setCurrentStep(currentStep - 1)
   }
 
+  // 模板下拉菜单
+  const templateMenuItems: MenuProps['items'] = [
+    {
+      key: 'from-template',
+      icon: <FileTextOutlined />,
+      label: '从模板创建',
+      onClick: () => setTemplateSelectorOpen(true),
+    },
+    {
+      key: 'save-template',
+      icon: <SaveOutlined />,
+      label: '保存为模板',
+      onClick: () => setSaveTemplateOpen(true),
+    },
+  ]
+
   return (
     <div>
-      <Title level={4}>创建测试任务</Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={4} style={{ margin: 0 }}>创建测试任务</Title>
+        <Dropdown menu={{ items: templateMenuItems }} placement="bottomRight">
+          <Button icon={<FileTextOutlined />}>
+            模板 <DownOutlined />
+          </Button>
+        </Dropdown>
+      </div>
 
       <Steps current={currentStep} style={{ marginBottom: 24 }}>
         {steps.map((item) => (
@@ -413,6 +610,20 @@ export function CreateTaskForm() {
           )}
         </Space>
       </div>
+
+      {/* 模板选择器 */}
+      <TemplateSelector
+        open={templateSelectorOpen}
+        onClose={() => setTemplateSelectorOpen(false)}
+        onSelect={handleApplyTemplate}
+      />
+
+      {/* 保存模板 */}
+      <SaveTemplateModal
+        open={saveTemplateOpen}
+        onClose={() => setSaveTemplateOpen(false)}
+        config={getCurrentConfig()}
+      />
     </div>
   )
 }

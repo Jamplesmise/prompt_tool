@@ -61,7 +61,12 @@ export async function mergeBranch(params: MergeBranchParams) {
     throw new Error('源分支没有任何版本')
   }
 
-  const newVersion = targetBranch.currentVersion + 1
+  // 获取该 prompt 下的最大版本号（考虑所有分支的版本）
+  const maxVersionResult = await prisma.promptVersion.aggregate({
+    where: { promptId: targetBranch.promptId },
+    _max: { version: true },
+  })
+  const newVersion = (maxVersionResult._max.version || targetBranch.currentVersion) + 1
   const mergeChangeLog = changeLog || `合并自分支 "${sourceBranch.name}"`
 
   // 使用事务执行合并

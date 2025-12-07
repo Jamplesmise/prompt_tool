@@ -12,6 +12,7 @@ export type Prompt = {
   id: string
   name: string
   description: string | null
+  systemPrompt: string | null
   content: string
   variables: PromptVariable[]
   tags: string[]
@@ -26,6 +27,7 @@ export type PromptVersion = {
   id: string
   promptId: string
   version: number
+  systemPrompt: string | null
   content: string
   variables: PromptVariable[]
   changeLog: string | null
@@ -37,6 +39,7 @@ export type PromptVersion = {
 export type CreatePromptInput = {
   name: string
   description?: string
+  systemPrompt?: string
   content: string
   variables?: PromptVariable[]
   tags?: string[]
