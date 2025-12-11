@@ -78,6 +78,9 @@ export const AlertMetricEnum = {
   AVG_LATENCY: 'AVG_LATENCY',
   ERROR_RATE: 'ERROR_RATE',
   COST: 'COST',
+  FIELD_PASS_RATE: 'FIELD_PASS_RATE',
+  FIELD_AVG_SCORE: 'FIELD_AVG_SCORE',
+  FIELD_REGRESSION: 'FIELD_REGRESSION',
 } as const
 
 // Phase 8: 告警条件

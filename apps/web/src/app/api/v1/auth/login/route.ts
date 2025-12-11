@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { validateCredentials, createSession } from '@/lib/auth'
 import { success, error } from '@/lib/api'
 import { ERROR_CODES } from '@platform/shared'
+import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/rateLimit'
 
 // 强制动态渲染，避免构建时预渲染错误
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    // 速率限制检查（登录接口：每分钟 5 次）
+    const rateLimitResponse = await withRateLimit(request, 'auth/login', RATE_LIMIT_PRESETS.login)
+    if (rateLimitResponse) return rateLimitResponse
+
     const body = await request.json()
     const { email, password } = body
 

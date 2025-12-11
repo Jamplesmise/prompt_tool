@@ -1,4 +1,3 @@
-export { PromptEditor } from './PromptEditor'
 export { VariableList } from './VariableList'
 export { VersionList } from './VersionList'
 export { QuickTest } from './QuickTest'
@@ -15,3 +14,6 @@ export { PromptPreviewCard } from './PromptPreviewCard'
 export type { PromptPreviewCardProps } from './PromptPreviewCard'
 export { PromptBatchActions } from './PromptBatchActions'
 export type { PromptBatchActionsProps } from './PromptBatchActions'
+
+// 结构化评估: Schema 关联
+export { SchemaAssociation } from './SchemaAssociation'

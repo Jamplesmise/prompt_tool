@@ -294,6 +294,132 @@ export async function getMetricValue(
 }
 
 /**
+ * 获取字段级指标值
+ */
+export async function getFieldMetricValue(
+  metric: 'pass_rate' | 'avg_score',
+  durationMinutes: number,
+  fieldKey: string,
+  scope?: {
+    taskIds?: string[]
+    promptIds?: string[]
+  },
+  userId?: string
+): Promise<number> {
+  const since = new Date(Date.now() - durationMinutes * 60 * 1000)
+
+  // 构建查询条件
+  const where: Record<string, unknown> = {
+    fieldKey,
+    createdAt: { gte: since },
+  }
+
+  if (userId) {
+    where.taskResult = {
+      task: { createdById: userId },
+    }
+  }
+
+  if (scope?.taskIds?.length) {
+    where.taskResult = {
+      ...(where.taskResult as Record<string, unknown> || {}),
+      taskId: { in: scope.taskIds },
+    }
+  }
+
+  if (scope?.promptIds?.length) {
+    where.taskResult = {
+      ...(where.taskResult as Record<string, unknown> || {}),
+      promptId: { in: scope.promptIds },
+    }
+  }
+
+  const fieldEvaluations = await prisma.fieldEvaluationResult.findMany({
+    where,
+    select: {
+      passed: true,
+      score: true,
+    },
+  })
+
+  if (fieldEvaluations.length === 0) {
+    return 0
+  }
+
+  switch (metric) {
+    case 'pass_rate': {
+      const passedCount = fieldEvaluations.filter((fe) => fe.passed).length
+      return passedCount / fieldEvaluations.length
+    }
+
+    case 'avg_score': {
+      const scores = fieldEvaluations
+        .filter((fe) => fe.score !== null)
+        .map((fe) => Number(fe.score))
+      return scores.length > 0
+        ? scores.reduce((a, b) => a + b, 0) / scores.length
+        : 0
+    }
+
+    default:
+      return 0
+  }
+}
+
+/**
+ * 获取字段回归检测值（当前任务与基准任务的通过率差异）
+ */
+export async function getFieldRegressionValue(
+  fieldKey: string,
+  currentTaskId: string,
+  baselineTaskId: string
+): Promise<number> {
+  // 获取当前任务的字段统计
+  const [currentTotal, currentPassed] = await Promise.all([
+    prisma.fieldEvaluationResult.count({
+      where: {
+        fieldKey,
+        taskResult: { taskId: currentTaskId },
+      },
+    }),
+    prisma.fieldEvaluationResult.count({
+      where: {
+        fieldKey,
+        passed: true,
+        taskResult: { taskId: currentTaskId },
+      },
+    }),
+  ])
+
+  // 获取基准任务的字段统计
+  const [baselineTotal, baselinePassed] = await Promise.all([
+    prisma.fieldEvaluationResult.count({
+      where: {
+        fieldKey,
+        taskResult: { taskId: baselineTaskId },
+      },
+    }),
+    prisma.fieldEvaluationResult.count({
+      where: {
+        fieldKey,
+        passed: true,
+        taskResult: { taskId: baselineTaskId },
+      },
+    }),
+  ])
+
+  if (currentTotal === 0 || baselineTotal === 0) {
+    return 0
+  }
+
+  const currentPassRate = currentPassed / currentTotal
+  const baselinePassRate = baselinePassed / baselineTotal
+
+  // 返回回归值（负数表示下降，正数表示提升）
+  return currentPassRate - baselinePassRate
+}
+
+/**
  * 模型性能数据类型
  */
 export type ModelPerformanceData = {

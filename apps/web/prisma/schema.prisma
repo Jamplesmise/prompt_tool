@@ -49,12 +49,118 @@ model User {
   // Phase 4: 任务模板
   taskTemplates TaskTemplate[]
 
+  // 结构化评估
+  evaluationSchemas EvaluationSchema[] @relation("EvaluationSchemaCreatedBy")
+  inputSchemas      InputSchema[]      @relation("InputSchemaCreatedBy")
+  outputSchemas     OutputSchema[]     @relation("OutputSchemaCreatedBy")
+
   @@map("users")
 }
 
 enum UserRole {
   ADMIN
   USER
+}
+
+// ============================================
+// 结构化评估模块
+// ============================================
+
+// 评估结构（输入+输出的完整单元）
+model EvaluationSchema {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("EvaluationSchemaCreatedBy", fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // 关联的输入输出结构
+  inputSchema  InputSchema?
+  outputSchema OutputSchema?
+
+  // 关联的提示词和数据集
+  prompts  Prompt[]
+  datasets Dataset[]
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([name])
+  @@map("evaluation_schemas")
+}
+
+// 输入结构定义
+model InputSchema {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  variables   Json    @default("[]") // InputVariableDefinition[]
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("InputSchemaCreatedBy", fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  // 关联到评估结构（可选，向后兼容）
+  evaluationSchemaId String?           @unique @map("evaluation_schema_id")
+  evaluationSchema   EvaluationSchema? @relation(fields: [evaluationSchemaId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  prompts  Prompt[]
+  datasets Dataset[]
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([name])
+  @@map("input_schemas")
+}
+
+// 输出结构定义
+model OutputSchema {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  fields      Json      @default("[]") // OutputFieldDefinition[]
+  parseMode   ParseMode @default(JSON)
+  parseConfig Json      @default("{}")
+  aggregation Json      @default("{}") // AggregationConfig
+
+  createdById String @map("created_by_id")
+  createdBy   User   @relation("OutputSchemaCreatedBy", fields: [createdById], references: [id])
+
+  teamId String? @map("team_id")
+  team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+
+  // 关联到评估结构（可选，向后兼容）
+  evaluationSchemaId String?           @unique @map("evaluation_schema_id")
+  evaluationSchema   EvaluationSchema? @relation(fields: [evaluationSchemaId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  prompts  Prompt[]
+  datasets Dataset[]
+
+  @@index([createdById])
+  @@index([teamId])
+  @@index([name])
+  @@map("output_schemas")
+}
+
+enum ParseMode {
+  JSON         // 直接 JSON.parse
+  JSON_EXTRACT // 从文本中提取 JSON
+  REGEX        // 正则表达式提取
+  TEMPLATE     // 模板匹配
 }
 
 // ============================================
@@ -77,6 +183,16 @@ model Prompt {
   teamId String? @map("team_id")
   team   Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
 
+  // 结构化评估：关联评估结构（推荐使用）
+  evaluationSchemaId String?           @map("evaluation_schema_id")
+  evaluationSchema   EvaluationSchema? @relation(fields: [evaluationSchemaId], references: [id], onDelete: SetNull)
+
+  // 结构化评估：直接关联输入输出结构（向后兼容，已废弃）
+  inputSchemaId  String?       @map("input_schema_id")
+  inputSchema    InputSchema?  @relation(fields: [inputSchemaId], references: [id], onDelete: SetNull)
+  outputSchemaId String?       @map("output_schema_id")
+  outputSchema   OutputSchema? @relation(fields: [outputSchemaId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -89,6 +205,9 @@ model Prompt {
   @@index([createdById])
   @@index([teamId])
   @@index([name])
+  @@index([evaluationSchemaId])
+  @@index([inputSchemaId])
+  @@index([outputSchemaId])
   @@map("prompts")
 }
 
@@ -180,6 +299,17 @@ model Dataset {
   // Phase 10: 版本管理
   currentVersion Int @default(0) @map("current_version")
 
+  // 结构化评估：关联评估结构（推荐使用）
+  evaluationSchemaId String?           @map("evaluation_schema_id")
+  evaluationSchema   EvaluationSchema? @relation(fields: [evaluationSchemaId], references: [id], onDelete: SetNull)
+
+  // 结构化评估：直接关联输入输出结构（向后兼容）
+  inputSchemaId  String?       @map("input_schema_id")
+  inputSchema    InputSchema?  @relation(fields: [inputSchemaId], references: [id], onDelete: SetNull)
+  outputSchemaId String?       @map("output_schema_id")
+  outputSchema   OutputSchema? @relation(fields: [outputSchemaId], references: [id], onDelete: SetNull)
+  fieldMapping   Json?         @map("field_mapping") // FieldMapping
+
   createdById String @map("created_by_id")
   createdBy   User   @relation(fields: [createdById], references: [id])
 
@@ -197,6 +327,9 @@ model Dataset {
 
   @@index([createdById])
   @@index([teamId])
+  @@index([evaluationSchemaId])
+  @@index([inputSchemaId])
+  @@index([outputSchemaId])
   @@map("datasets")
 }
 
@@ -521,6 +654,13 @@ model TaskResult {
   output   String?
   expected String?
 
+  // 结构化评估扩展字段
+  outputRaw       String?  @map("output_raw")     // 原始输出
+  outputParsed    Json?    @map("output_parsed")  // 解析后的结构化输出
+  parseSuccess    Boolean  @default(true) @map("parse_success")
+  parseError      String?  @map("parse_error")
+  expectedValues  Json?    @map("expected_values") // 结构化期望值
+
   latencyMs    Int?     @map("latency_ms")
   tokens       Json     @default("{\"input\": 0, \"output\": 0, \"total\": 0}")
   cost         Decimal? @db.Decimal(10, 6)
@@ -531,11 +671,43 @@ model TaskResult {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  evaluations EvaluationResult[]
+  evaluations      EvaluationResult[]
+  fieldEvaluations FieldEvaluationResult[]
 
   @@index([taskId])
   @@index([taskId, status])
   @@map("task_results")
+}
+
+// 字段级评估结果
+model FieldEvaluationResult {
+  id           String     @id @default(uuid())
+  taskResultId String     @map("task_result_id")
+  taskResult   TaskResult @relation(fields: [taskResultId], references: [id], onDelete: Cascade)
+
+  fieldName     String  @map("field_name")     // 显示名称
+  fieldKey      String  @map("field_key")      // JSON key
+  fieldValue    Json?   @map("field_value")    // 实际值
+  expectedValue Json?   @map("expected_value") // 期望值
+
+  evaluatorId   String? @map("evaluator_id")
+  evaluatorName String? @map("evaluator_name")
+
+  passed  Boolean
+  score   Decimal? @db.Decimal(5, 4)
+  reason  String?
+  details Json     @default("{}")
+
+  skipped    Boolean @default(false)
+  skipReason String? @map("skip_reason")
+
+  latencyMs Int? @map("latency_ms")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskResultId])
+  @@index([fieldKey])
+  @@map("field_evaluation_results")
 }
 
 enum ResultStatus {
@@ -710,6 +882,9 @@ enum AlertMetric {
   AVG_LATENCY
   ERROR_RATE
   COST
+  FIELD_PASS_RATE
+  FIELD_AVG_SCORE
+  FIELD_REGRESSION
 }
 
 enum AlertCondition {
@@ -819,6 +994,11 @@ model Team {
 
   // Phase 4: 任务模板
   taskTemplates TaskTemplate[]
+
+  // 结构化评估
+  evaluationSchemas EvaluationSchema[]
+  inputSchemas      InputSchema[]
+  outputSchemas     OutputSchema[]
 
   @@index([ownerId])
   @@map("teams")

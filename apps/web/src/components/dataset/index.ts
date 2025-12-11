@@ -15,3 +15,10 @@ export { VersionHistory } from './VersionHistory'
 export { CreateVersionModal } from './CreateVersionModal'
 export { VersionDiffModal } from './VersionDiffModal'
 export { VersionRowsModal } from './VersionRowsModal'
+
+// 结构化评估: 模板下载
+export { TemplateDownloadModal } from './TemplateDownloadModal'
+
+// 结构化评估: Schema 字段映射
+export { SchemaFieldMapper } from './SchemaFieldMapper'
+export type { InputVariableMapping, ExpectedValueMapping, SchemaMappingResult } from './SchemaFieldMapper'

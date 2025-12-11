@@ -154,6 +154,28 @@ export function useDeletePrompt() {
   })
 }
 
+// 复制提示词
+export function useCopyPrompt() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await promptsService.copy(id)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: PROMPTS_KEY })
+      appMessage.success('复制成功')
+    },
+    onError: (error: Error) => {
+      appMessage.error(error.message || '复制失败')
+    },
+  })
+}
+
 // 版本列表
 export function usePromptVersions(promptId: string) {
   return useQuery({

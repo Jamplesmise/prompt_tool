@@ -79,6 +79,122 @@ type TaskResultItem = {
   createdAt: string
 }
 
+// 字段级评估结果
+type FieldEvaluationItem = {
+  id: string
+  fieldName: string
+  fieldKey: string
+  fieldValue: unknown
+  expectedValue: unknown
+  evaluatorId: string | null
+  evaluatorName: string | null
+  passed: boolean
+  score: number | null
+  reason: string | null
+  details: Record<string, unknown>
+  skipped: boolean
+  skipReason: string | null
+  latencyMs: number | null
+  isCritical: boolean
+  weight: number
+}
+
+// 结果详情（含字段级评估）
+type TaskResultDetail = TaskResultItem & {
+  taskId: string
+  rowData: Record<string, unknown>
+  parsedOutput: Record<string, unknown> | null
+  parseSuccess: boolean
+  parseError: string | null
+  fieldEvaluations: FieldEvaluationItem[]
+  aggregation: {
+    mode: string
+    passThreshold: number
+    totalFields: number
+    evaluatedFields: number
+    passedFields: number
+    failedFields: number
+    skippedFields: number
+    criticalPassed: boolean
+    criticalFailed: string[]
+  }
+}
+
+// 字段统计项
+type FieldStatsItem = {
+  fieldKey: string
+  fieldName: string
+  isCritical: boolean
+  passRate: number
+  avgScore: number
+  passCount: number
+  failCount: number
+  skipCount: number
+  totalCount: number
+}
+
+// 字段统计响应
+type FieldStatsResponse = {
+  fields: FieldStatsItem[]
+  failureReasons: Record<string, Array<{ reason: string; count: number }>>
+  summary: {
+    totalResults: number
+    totalFieldEvaluations: number
+    totalFields: number
+    criticalFields: number
+    avgPassRate: number
+  }
+}
+
+// 任务对比 - 字段级对比结果
+type FieldComparison = {
+  fieldKey: string
+  fieldName: string
+  isCritical: boolean
+  basePassRate: number
+  comparePassRate: number
+  change: number
+  isRegression: boolean
+  baseAvgScore: number
+  compareAvgScore: number
+  scoreChange: number
+}
+
+// 任务对比响应
+type TaskCompareResponse = {
+  baseTask: {
+    id: string
+    name: string
+    status: string
+    createdAt: string
+    promptName?: string
+  }
+  compareTask: {
+    id: string
+    name: string
+    status: string
+    createdAt: string
+    promptName?: string
+  }
+  summary: {
+    basePassRate: number
+    comparePassRate: number
+    change: number
+    totalFields: number
+    regressionCount: number
+    hasRegression: boolean
+  }
+  fieldComparison: FieldComparison[]
+  regressions: FieldComparison[]
+}
+
+// 任务对比输入参数
+type TaskCompareInput = {
+  baseTaskId: string
+  compareTaskId: string
+  threshold?: number
+}
+
 // 分页响应
 type PaginatedResponse<T> = {
   list: T[]
@@ -322,6 +438,21 @@ export const tasksService = {
     return response.blob()
   },
 
+  // 获取单个结果详情（含字段级评估）
+  async getResultDetail(
+    taskId: string,
+    resultId: string
+  ): Promise<ApiResponse<TaskResultDetail>> {
+    const response = await fetch(`${API_BASE}/tasks/${taskId}/results/${resultId}`)
+    return response.json()
+  },
+
+  // 获取字段级统计
+  async getFieldStats(taskId: string): Promise<ApiResponse<FieldStatsResponse>> {
+    const response = await fetch(`${API_BASE}/tasks/${taskId}/stats/fields`)
+    return response.json()
+  },
+
   // 创建 A/B 测试任务
   async createABTest(data: CreateABTestInput): Promise<ApiResponse<ABTestCreateResult>> {
     const response = await fetch(`${API_BASE}/tasks/ab`, {
@@ -337,12 +468,29 @@ export const tasksService = {
     const response = await fetch(`${API_BASE}/tasks/${id}/ab-results`)
     return response.json()
   },
+
+  // 任务对比（字段级回归检测）
+  async compare(data: TaskCompareInput): Promise<ApiResponse<TaskCompareResponse>> {
+    const response = await fetch(`${API_BASE}/tasks/compare`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    return response.json()
+  },
 }
 
 export type {
   TaskListItem,
   TaskDetail,
   TaskResultItem,
+  TaskResultDetail,
+  FieldEvaluationItem,
+  FieldStatsItem,
+  FieldStatsResponse,
+  FieldComparison,
+  TaskCompareResponse,
+  TaskCompareInput,
   PaginatedResponse,
   CreateTaskInput,
   TaskListParams,

@@ -512,3 +512,185 @@ TaskResult (模型调用结果)
 | `preset-similarity` | 相似度匹配 | PRESET |
 
 这些 ID 固定不变，可直接在代码中引用。
+
+---
+
+## 九、结构化评估
+
+### 9.1 概述
+
+结构化评估是一种高级评估方式，适用于模型输出结构化数据（如 JSON）的场景。通过定义输入结构（InputSchema）和输出结构（OutputSchema），可以实现：
+
+- **字段级评估**：对每个输出字段独立评估
+- **权重控制**：为不同字段设置评估权重
+- **关键字段**：标记关键字段，优先保证通过
+- **聚合策略**：多种结果聚合模式
+
+### 9.2 输入结构 (InputSchema)
+
+定义提示词需要的输入变量：
+
+```typescript
+{
+  name: "客服对话输入",
+  description: "智能客服场景的输入变量定义",
+  variables: [
+    {
+      name: "用户问题",
+      key: "user_question",
+      type: "string",
+      required: true,
+      description: "用户描述的问题内容"
+    },
+    {
+      name: "对话历史",
+      key: "chat_history",
+      type: "array",
+      itemType: "object",
+      properties: [
+        { key: "role", type: "string" },
+        { key: "content", type: "string" }
+      ],
+      required: false
+    }
+  ]
+}
+```
+
+### 9.3 输出结构 (OutputSchema)
+
+定义模型输出的字段及评估规则：
+
+```typescript
+{
+  name: "客服意图输出",
+  description: "智能客服场景的输出字段定义",
+  fields: [
+    {
+      name: "问题分类",
+      key: "problem_type",
+      type: "enum",
+      enumValues: ["bluetooth", "wifi", "battery", "screen", "system", "other"],
+      required: true,
+      evaluation: {
+        weight: 0.4,
+        isCritical: true,
+        expectedField: "expected_type"  // 数据集中的期望值字段
+      }
+    },
+    {
+      name: "置信度",
+      key: "confidence",
+      type: "number",
+      required: true,
+      evaluation: {
+        weight: 0.2,
+        isCritical: false
+      }
+    }
+  ],
+  parseMode: "JSON",
+  aggregation: {
+    mode: "critical_first",
+    passThreshold: 0.8
+  }
+}
+```
+
+### 9.4 字段类型
+
+| 类型 | 说明 | 评估方式 |
+|------|------|----------|
+| `string` | 字符串 | 精确匹配或相似度 |
+| `number` | 数字 | 相等或范围匹配 |
+| `boolean` | 布尔值 | 精确匹配 |
+| `enum` | 枚举值 | 在允许值列表内 |
+| `array` | 数组 | 元素类型和长度检查 |
+| `object` | 对象 | 递归检查属性 |
+
+### 9.5 评估配置
+
+每个字段可配置：
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `weight` | number | 权重 0-1，用于加权平均 |
+| `isCritical` | boolean | 是否关键字段 |
+| `evaluator` | string | 自定义评估器 ID |
+| `expectedField` | string | 数据集中对应的期望值字段名 |
+
+### 9.6 聚合模式
+
+| 模式 | 说明 |
+|------|------|
+| `all_pass` | 所有字段都通过才算通过 |
+| `weighted_average` | 加权平均分 >= 阈值算通过 |
+| `critical_first` | 优先检查关键字段，全部通过后再看加权得分 |
+| `custom` | 自定义逻辑（JavaScript 表达式） |
+
+### 9.7 使用流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      结构化评估流程                              │
+└─────────────────────────────────────────────────────────────────┘
+
+1. 创建输入/输出结构
+   │
+   ├── 手动创建：在「结构定义」页面配置
+   │
+   ├── 使用模板：从「模板库」选择预置场景
+   │
+   └── 从输出推断：粘贴样本输出自动识别字段
+   │
+   ▼
+2. 关联到提示词
+   │
+   └── 在提示词编辑页选择 InputSchema 和 OutputSchema
+   │
+   ▼
+3. 准备数据集
+   │
+   └── 确保数据集包含输入变量和期望值字段
+   │
+   ▼
+4. 执行测试任务
+   │
+   └── 系统自动进行字段级评估
+   │
+   ▼
+5. 查看结果
+   │
+   ├── 字段分析面板：各字段通过率统计
+   │
+   ├── 结果详情：每条记录的字段评估明细
+   │
+   └── 导出报告：多 Sheet Excel 包含聚合详情
+```
+
+### 9.8 AI 配置助手
+
+系统提供 AI 配置助手，支持：
+
+1. **需求描述**：用自然语言描述测试场景
+2. **自动生成**：AI 生成 InputSchema 和 OutputSchema
+3. **多轮对话**：追问补充、调整配置
+4. **一键应用**：直接创建 Schema 并关联提示词
+
+访问路径：`/schemas/ai-assistant`
+
+### 9.9 任务对比
+
+对比两个任务的字段级评估结果，用于：
+
+- 版本迭代效果对比
+- 模型升级回归检测
+- A/B 测试分析
+
+访问路径：`/tasks/compare`
+
+功能：
+- 选择基准任务和对比任务
+- 查看总体通过率变化
+- 字段级变化分析（提升/稳定/回归）
+- 回归字段高亮提示

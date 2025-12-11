@@ -2,6 +2,7 @@
 
 export {
   TASK_QUEUE_NAME,
+  DEAD_LETTER_QUEUE_NAME,
   getTaskQueue,
   getTaskQueueEvents,
   enqueueTask,
@@ -11,8 +12,16 @@ export {
   pauseQueue,
   resumeQueue,
   clearQueue,
+  // 死信队列
+  getDeadLetterQueue,
+  moveToDeadLetterQueue,
+  getDeadLetterJobs,
+  retryFromDeadLetterQueue,
+  clearDeadLetterQueue,
+  getDeadLetterStats,
   type TaskJobData,
   type TaskJobResult,
+  type DeadLetterJobData,
 } from './taskQueue'
 
 export {

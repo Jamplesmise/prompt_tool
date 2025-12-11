@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, Form, Input, Button, Typography, Spin, Statistic, Row, Col } from 'antd'
-import { PlayCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { Card, Form, Input, Button, Typography, Spin, Statistic, Row, Col, Table, Collapse, Tag } from 'antd'
+import { PlayCircleOutlined, LoadingOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons'
 import type { PromptVariable } from '@platform/shared'
 import type { TestPromptResult } from '@/services/prompts'
 import { SimpleModelSelector } from '@/components/common'
@@ -141,13 +141,92 @@ export function QuickTest({
                   />
                 </Col>
               </Row>
-              <Text type="secondary" style={{ fontSize: 12 }}>输出结果</Text>
-              <TextArea
-                value={result.output}
-                readOnly
-                autoSize={{ minRows: 3, maxRows: 10 }}
-                style={{ marginTop: 8 }}
-              />
+
+              {/* 结构化输出展示 */}
+              {result.outputFields && result.outputFields.length > 0 ? (
+                <>
+                  <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>解析结果</Text>
+                    {result.parseSuccess ? (
+                      <Tag icon={<CheckCircleOutlined />} color="success">解析成功</Tag>
+                    ) : (
+                      <Tag icon={<WarningOutlined />} color="warning">解析失败</Tag>
+                    )}
+                  </div>
+                  {result.parseSuccess ? (
+                    <Table
+                      size="small"
+                      pagination={false}
+                      dataSource={result.outputFields.map((f, i) => ({ ...f, _index: i }))}
+                      columns={[
+                        {
+                          title: '字段名',
+                          dataIndex: 'name',
+                          key: 'name',
+                          width: 120,
+                          render: (name: string, record: { key: string }) => (
+                            <span>
+                              <Text strong>{name}</Text>
+                              <br />
+                              <Text type="secondary" style={{ fontSize: 11 }}>{record.key}</Text>
+                            </span>
+                          ),
+                        },
+                        {
+                          title: '值',
+                          dataIndex: 'value',
+                          key: 'value',
+                          render: (value: unknown) => {
+                            if (value === undefined || value === null) {
+                              return <Text type="secondary">-</Text>
+                            }
+                            if (typeof value === 'object') {
+                              return (
+                                <Text code style={{ fontSize: 12, wordBreak: 'break-all' }}>
+                                  {JSON.stringify(value, null, 2)}
+                                </Text>
+                              )
+                            }
+                            return <Text>{String(value)}</Text>
+                          },
+                        },
+                      ]}
+                      rowKey="_index"
+                      style={{ marginBottom: 12 }}
+                    />
+                  ) : (
+                    <div style={{ color: '#faad14', padding: '8px 12px', background: '#fffbe6', borderRadius: 6, marginBottom: 12 }}>
+                      <Text type="warning">解析失败: {result.parseError || '未知错误'}</Text>
+                    </div>
+                  )}
+                  <Collapse
+                    size="small"
+                    items={[
+                      {
+                        key: 'raw',
+                        label: '原始输出',
+                        children: (
+                          <TextArea
+                            value={result.output}
+                            readOnly
+                            autoSize={{ minRows: 2, maxRows: 8 }}
+                          />
+                        ),
+                      },
+                    ]}
+                  />
+                </>
+              ) : (
+                <>
+                  <Text type="secondary" style={{ fontSize: 12 }}>输出结果</Text>
+                  <TextArea
+                    value={result.output}
+                    readOnly
+                    autoSize={{ minRows: 3, maxRows: 10 }}
+                    style={{ marginTop: 8 }}
+                  />
+                </>
+              )}
             </>
           ) : (
             <div style={{ color: '#ff4d4f', padding: '12px', background: '#fff2f0', borderRadius: 6 }}>

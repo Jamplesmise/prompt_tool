@@ -1166,3 +1166,396 @@ data: {"status": "completed", "stats": {...}}
   }
 }
 ```
+
+---
+
+## 九、结构定义 API（Schema）
+
+### 9.1 输入结构 API
+
+#### GET /api/v1/input-schemas
+
+获取输入结构列表
+
+**查询参数**：
+```typescript
+{
+  search?: string;  // 搜索名称
+}
+```
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    list: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      variables: Array<{
+        name: string;
+        key: string;
+        type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+        required: boolean;
+      }>;
+      _count: { prompts: number };
+      createdAt: string;
+    }>;
+  }
+}
+```
+
+#### POST /api/v1/input-schemas
+
+创建输入结构
+
+**请求体**：
+```typescript
+{
+  name: string;
+  description?: string;
+  variables: Array<{
+    name: string;
+    key: string;
+    type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+    description?: string;
+    required?: boolean;
+    defaultValue?: any;
+    itemType?: string;     // array 类型时的元素类型
+    properties?: Array<{   // object/array of object 时的属性
+      key: string;
+      type: string;
+    }>;
+  }>;
+}
+```
+
+#### GET /api/v1/input-schemas/:id
+
+获取输入结构详情
+
+#### PUT /api/v1/input-schemas/:id
+
+更新输入结构
+
+#### DELETE /api/v1/input-schemas/:id
+
+删除输入结构（需无关联提示词）
+
+### 9.2 输出结构 API
+
+#### GET /api/v1/output-schemas
+
+获取输出结构列表
+
+**查询参数**：
+```typescript
+{
+  search?: string;
+}
+```
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    list: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      fields: Array<{
+        name: string;
+        key: string;
+        type: string;
+        required: boolean;
+        evaluation?: {
+          weight: number;
+          isCritical: boolean;
+        };
+      }>;
+      parseMode: 'JSON' | 'YAML' | 'XML' | 'CUSTOM';
+      aggregation: {
+        mode: 'all_pass' | 'weighted_average' | 'critical_first' | 'custom';
+        passThreshold?: number;
+      };
+      _count: { prompts: number };
+      createdAt: string;
+    }>;
+  }
+}
+```
+
+#### POST /api/v1/output-schemas
+
+创建输出结构
+
+**请求体**：
+```typescript
+{
+  name: string;
+  description?: string;
+  fields: Array<{
+    name: string;
+    key: string;
+    type: 'string' | 'number' | 'boolean' | 'enum' | 'array' | 'object';
+    description?: string;
+    required?: boolean;
+    enumValues?: string[];  // enum 类型时的可选值
+    itemType?: string;
+    properties?: Array<{ key: string; type: string }>;
+    evaluation?: {
+      weight?: number;      // 权重 0-1
+      isCritical?: boolean; // 是否关键字段
+      evaluator?: string;   // 自定义评估器 ID
+      expectedField?: string; // 数据集中的期望值字段
+    };
+  }>;
+  parseMode?: 'JSON' | 'YAML' | 'XML' | 'CUSTOM';
+  parseConfig?: Record<string, any>;
+  aggregation?: {
+    mode: 'all_pass' | 'weighted_average' | 'critical_first' | 'custom';
+    passThreshold?: number;
+    customLogic?: string;
+  };
+}
+```
+
+#### GET /api/v1/output-schemas/:id
+
+获取输出结构详情
+
+#### PUT /api/v1/output-schemas/:id
+
+更新输出结构
+
+#### DELETE /api/v1/output-schemas/:id
+
+删除输出结构（需无关联提示词）
+
+### 9.3 Schema 模板 API
+
+#### GET /api/v1/schemas/templates
+
+获取模板列表（按分类）
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    categories: Array<{
+      key: string;         // customer_service, document_analysis, etc.
+      label: string;       // 中文分类名
+      templates: Array<{
+        id: string;
+        name: string;
+        description: string;
+        icon?: string;
+        inputVariableCount: number;
+        outputFieldCount: number;
+      }>;
+    }>;
+    total: number;
+  }
+}
+```
+
+#### GET /api/v1/schemas/templates/:id
+
+获取模板详情
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    id: string;
+    name: string;
+    category: string;
+    categoryLabel: string;
+    description: string;
+    icon?: string;
+    inputSchema: {
+      name: string;
+      description: string;
+      variables: Array<{...}>;
+    };
+    outputSchema: {
+      name: string;
+      description: string;
+      fields: Array<{...}>;
+      parseMode: string;
+      aggregation: {...};
+    };
+  }
+}
+```
+
+#### POST /api/v1/schemas/templates/:id/use
+
+使用模板创建 Schema
+
+**请求体**：
+```typescript
+{
+  teamId?: string;
+  inputSchemaName?: string;   // 自定义名称，否则用模板默认
+  outputSchemaName?: string;
+}
+```
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    inputSchemaId: string;
+    outputSchemaId: string;
+    inputSchema: {...};
+    outputSchema: {...};
+    templateId: string;
+    templateName: string;
+  }
+}
+```
+
+### 9.4 Schema 推断 API
+
+#### POST /api/v1/schemas/infer-from-output
+
+从样本输出推断输出结构
+
+**请求体**：
+```typescript
+{
+  sampleOutput: string;  // JSON 字符串或含代码块的文本
+}
+```
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    fields: Array<{
+      name: string;        // 自动生成的中文名称
+      key: string;
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+      description: string;
+      required: boolean;
+      itemType?: string;
+      properties?: Array<{ key: string; type: string }>;
+      evaluation: {
+        weight: number;
+        isCritical: boolean;
+      };
+    }>;
+    parseMode: 'JSON';
+    suggestedAggregation: {
+      mode: 'weighted_average';
+      passThreshold: 0.6;
+    };
+  }
+}
+```
+
+---
+
+## 十、任务对比 API
+
+### POST /api/v1/tasks/compare
+
+对比两个任务的字段级评估结果
+
+**请求体**：
+```typescript
+{
+  baseTaskId: string;      // 基准任务 ID
+  compareTaskId: string;   // 对比任务 ID
+  threshold?: number;      // 回归阈值，默认 0.05 (5%)
+}
+```
+
+**响应**：
+```typescript
+{
+  code: 200,
+  data: {
+    baseTask: {
+      id: string;
+      name: string;
+      status: string;
+      createdAt: string;
+      promptName: string;
+    };
+    compareTask: {
+      id: string;
+      name: string;
+      status: string;
+      createdAt: string;
+      promptName: string;
+    };
+    summary: {
+      basePassRate: number;
+      comparePassRate: number;
+      change: number;           // 变化值（正=提升，负=下降）
+      totalFields: number;
+      regressionCount: number;
+      hasRegression: boolean;
+    };
+    fieldComparison: Array<{
+      fieldKey: string;
+      fieldName: string;
+      isCritical: boolean;
+      basePassRate: number;
+      comparePassRate: number;
+      change: number;
+      isRegression: boolean;
+      baseAvgScore: number;
+      compareAvgScore: number;
+      scoreChange: number;
+    }>;
+    regressions: Array<{...}>;  // 回归字段列表（按变化程度排序）
+  }
+}
+```
+
+---
+
+## 十一、扩展导出参数
+
+### GET /api/v1/tasks/:id/results/export
+
+**扩展查询参数**：
+```typescript
+{
+  format?: 'xlsx' | 'csv' | 'json';  // 默认 xlsx
+  includeFieldEvaluations?: boolean; // 是否包含字段级评估 Sheet
+  includeAggregation?: boolean;      // 是否包含聚合详情 Sheet
+}
+```
+
+**Excel 多 Sheet 导出说明**：
+
+当 `includeFieldEvaluations=true` 或 `includeAggregation=true` 时，Excel 文件包含多个 Sheet：
+
+1. **结果概览** Sheet：基础测试结果（序号、提示词、模型、输入、输出、状态等）
+
+2. **字段级评估** Sheet（`includeFieldEvaluations=true`）：
+   - 序号、字段名、字段Key、实际值、期望值
+   - 评估器、通过、得分、原因、是否关键
+
+3. **聚合详情** Sheet（`includeAggregation=true`）：
+   - 序号、聚合模式、关键字段总数、关键字段通过数
+   - 关键字段通过、加权得分、最终结果、结果原因
+
+**JSON 导出格式**（包含额外数据时）：
+```typescript
+{
+  results: Array<{...}>;
+  fieldEvaluations?: Array<{...}>;
+  aggregations?: Array<{...}>;
+}
+```

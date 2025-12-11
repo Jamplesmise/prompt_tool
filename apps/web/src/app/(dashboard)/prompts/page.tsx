@@ -7,6 +7,7 @@ import {
   usePrompts,
   usePrompt,
   useDeletePrompt,
+  useCopyPrompt,
   useBatchDeletePrompts,
   useBatchExportPrompts,
 } from '@/hooks/usePrompts'
@@ -52,6 +53,7 @@ export default function PromptsPage() {
 
   // 操作 hooks
   const deletePrompt = useDeletePrompt()
+  const copyPrompt = useCopyPrompt()
   const batchDelete = useBatchDeletePrompts()
   const batchExport = useBatchExportPrompts()
 
@@ -75,10 +77,9 @@ export default function PromptsPage() {
   }, [deletePrompt])
 
   // 复制提示词
-  const handleCopy = useCallback((_id: string) => {
-    // TODO: 实现复制功能
-    appMessage.info('复制功能开发中')
-  }, [])
+  const handleCopy = useCallback(async (id: string) => {
+    await copyPrompt.mutateAsync(id)
+  }, [copyPrompt])
 
   // 批量删除
   const handleBatchDelete = useCallback(async () => {

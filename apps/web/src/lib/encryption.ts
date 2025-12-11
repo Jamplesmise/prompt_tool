@@ -6,18 +6,35 @@ const KEY_LENGTH = 32
 const IV_LENGTH = 16
 const AUTH_TAG_LENGTH = 16
 
-// 从环境变量获取加密密钥，生产环境必须配置
+// 密钥缓存（避免重复派生）
+let cachedKey: Buffer | null = null
+
+// 从环境变量获取加密密钥
 function getEncryptionKey(): Buffer {
+  // 使用缓存避免重复计算
+  if (cachedKey) {
+    return cachedKey
+  }
+
   const key = process.env.ENCRYPTION_KEY
   if (!key) {
-    // 开发环境使用默认密钥
-    if (process.env.NODE_ENV === 'development') {
-      return crypto.scryptSync('dev-secret-key', 'salt', KEY_LENGTH)
-    }
-    throw new Error('ENCRYPTION_KEY environment variable is required in production')
+    throw new Error(
+      'ENCRYPTION_KEY environment variable is required. ' +
+      'Please set it in your .env file (at least 32 characters).'
+    )
   }
+
+  if (key.length < 32) {
+    throw new Error('ENCRYPTION_KEY must be at least 32 characters long')
+  }
+
+  // 从环境变量获取 salt，或使用基于密钥的派生 salt
+  const saltEnv = process.env.ENCRYPTION_SALT
+  const salt = saltEnv || crypto.createHash('sha256').update(key + 'default-salt').digest().slice(0, 16)
+
   // 使用 scrypt 派生固定长度的密钥
-  return crypto.scryptSync(key, 'salt', KEY_LENGTH)
+  cachedKey = crypto.scryptSync(key, salt, KEY_LENGTH)
+  return cachedKey
 }
 
 // 加密 API Key

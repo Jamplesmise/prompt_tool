@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { cookies, headers } from 'next/headers'
 import { prisma } from './prisma'
 import type { UserSession } from '@platform/shared'
@@ -6,6 +7,55 @@ import type { UserSession } from '@platform/shared'
 const SALT_ROUNDS = 10
 const SESSION_COOKIE_NAME = 'session_token'
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60 // 7 天（秒）
+
+// 会话数据加密密钥
+function getSessionKey(): Buffer {
+  const key = process.env.SESSION_SECRET || process.env.ENCRYPTION_KEY
+  if (!key || key.length < 32) {
+    throw new Error('SESSION_SECRET or ENCRYPTION_KEY (min 32 chars) is required')
+  }
+  return crypto.scryptSync(key, 'session-salt', 32)
+}
+
+// 加密会话数据（隐藏 userId）
+function encryptSessionData(userId: string, token: string): string {
+  const key = getSessionKey()
+  const iv = crypto.randomBytes(16)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+
+  const data = JSON.stringify({ userId, token, timestamp: Date.now() })
+  let encrypted = cipher.update(data, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+
+  const authTag = cipher.getAuthTag()
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
+}
+
+// 解密会话数据
+function decryptSessionData(encryptedData: string): { userId: string; token: string; timestamp: number } | null {
+  try {
+    const key = getSessionKey()
+    const parts = encryptedData.split(':')
+
+    if (parts.length !== 3) {
+      return null
+    }
+
+    const [ivHex, authTagHex, encrypted] = parts
+    const iv = Buffer.from(ivHex, 'hex')
+    const authTag = Buffer.from(authTagHex, 'hex')
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
+    decipher.setAuthTag(authTag)
+
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+
+    return JSON.parse(decrypted)
+  } catch {
+    return null
+  }
+}
 
 // API Token 认证结果
 export type ApiTokenAuth = {
@@ -37,17 +87,15 @@ export function generateSessionToken(): string {
 // 创建会话
 export async function createSession(userId: string): Promise<string> {
   const token = generateSessionToken()
-  const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000)
 
-  // 存储到数据库（使用 User 的 settings 字段临时存储，或后续可扩展 Session 表）
-  // 这里简化处理：直接使用 token 作为会话标识，存储在 cookie 中
-  // 实际生产环境建议使用 Redis 或数据库 Session 表
+  // 加密会话数据，避免直接暴露 userId
+  const encryptedSession = encryptSessionData(userId, token)
 
   const cookieStore = await cookies()
-  cookieStore.set(SESSION_COOKIE_NAME, `${userId}:${token}`, {
+  cookieStore.set(SESSION_COOKIE_NAME, encryptedSession, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'strict', // 增强 CSRF 防护
     maxAge: SESSION_MAX_AGE,
     path: '/',
   })
@@ -77,8 +125,17 @@ export async function getSession(): Promise<UserSession | null> {
     return null
   }
 
-  const [userId] = sessionCookie.value.split(':')
-  if (!userId) {
+  // 解密会话数据
+  const sessionData = decryptSessionData(sessionCookie.value)
+  if (!sessionData) {
+    return null
+  }
+
+  const { userId, timestamp } = sessionData
+
+  // 检查会话是否过期（额外的服务端验证）
+  const sessionAge = Date.now() - timestamp
+  if (sessionAge > SESSION_MAX_AGE * 1000) {
     return null
   }
 

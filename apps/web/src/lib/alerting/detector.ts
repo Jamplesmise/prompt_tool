@@ -1,9 +1,10 @@
 // 告警检测器
 
 import { prisma } from '../prisma'
-import { getMetricValue } from '../metrics/aggregator'
+import { getMetricValue, getFieldMetricValue, getFieldRegressionValue } from '../metrics/aggregator'
 import { evaluateCondition } from './evaluator'
-import type { AlertMetric, AlertScope } from '@platform/shared'
+import { dispatchAlertNotifications } from '../notify/dispatcher'
+import type { AlertMetric, AlertScope, FieldAlertConfig } from '@platform/shared'
 
 /**
  * 检查单个告警规则
@@ -36,27 +37,34 @@ async function checkAlertRule(ruleId: string): Promise<{
     return { triggered: false, value: 0 }
   }
 
-  // 获取指标值
-  const metricMap: Record<string, 'pass_rate' | 'avg_latency' | 'error_rate' | 'cost'> = {
-    PASS_RATE: 'pass_rate',
-    AVG_LATENCY: 'avg_latency',
-    ERROR_RATE: 'error_rate',
-    COST: 'cost',
-  }
-
-  const metric = metricMap[rule.metric]
   const scope = rule.scope as AlertScope | null
+  let value = 0
 
-  const value = await getMetricValue(
-    metric,
-    rule.duration,
-    {
-      taskIds: scope?.taskIds,
-      promptIds: scope?.promptIds,
-      modelIds: scope?.modelIds,
-    },
-    rule.createdById
-  )
+  // 根据指标类型获取值
+  if (rule.metric.startsWith('FIELD_')) {
+    // 字段级指标
+    value = await getFieldMetricValueForRule(rule.metric as AlertMetric, rule.duration, scope, rule.createdById)
+  } else {
+    // 传统指标
+    const metricMap: Record<string, 'pass_rate' | 'avg_latency' | 'error_rate' | 'cost'> = {
+      PASS_RATE: 'pass_rate',
+      AVG_LATENCY: 'avg_latency',
+      ERROR_RATE: 'error_rate',
+      COST: 'cost',
+    }
+
+    const metric = metricMap[rule.metric]
+    value = await getMetricValue(
+      metric,
+      rule.duration,
+      {
+        taskIds: scope?.taskIds,
+        promptIds: scope?.promptIds,
+        modelIds: scope?.modelIds,
+      },
+      rule.createdById
+    )
+  }
 
   // 评估条件
   const triggered = evaluateCondition(
@@ -66,6 +74,75 @@ async function checkAlertRule(ruleId: string): Promise<{
   )
 
   return { triggered, value }
+}
+
+/**
+ * 获取字段级指标值
+ */
+async function getFieldMetricValueForRule(
+  metric: AlertMetric,
+  duration: number,
+  scope: AlertScope | null,
+  userId: string
+): Promise<number> {
+  const fieldConfig = scope?.fieldConfig as FieldAlertConfig | undefined
+
+  if (!fieldConfig?.fieldKey) {
+    console.warn('[Alert] Field metric rule missing fieldKey in scope.fieldConfig')
+    return 0
+  }
+
+  switch (metric) {
+    case 'FIELD_PASS_RATE':
+      return getFieldMetricValue(
+        'pass_rate',
+        duration,
+        fieldConfig.fieldKey,
+        { taskIds: scope?.taskIds, promptIds: scope?.promptIds },
+        userId
+      )
+
+    case 'FIELD_AVG_SCORE':
+      return getFieldMetricValue(
+        'avg_score',
+        duration,
+        fieldConfig.fieldKey,
+        { taskIds: scope?.taskIds, promptIds: scope?.promptIds },
+        userId
+      )
+
+    case 'FIELD_REGRESSION': {
+      // 回归检测需要基准任务
+      if (!fieldConfig.baselineTaskId) {
+        console.warn('[Alert] FIELD_REGRESSION rule missing baselineTaskId')
+        return 0
+      }
+
+      // 获取最近完成的任务作为当前任务
+      const latestTask = await prisma.task.findFirst({
+        where: {
+          createdById: userId,
+          status: 'COMPLETED',
+          ...(scope?.promptIds?.length ? { promptId: { in: scope.promptIds } } : {}),
+        },
+        orderBy: { completedAt: 'desc' },
+        select: { id: true },
+      })
+
+      if (!latestTask) {
+        return 0
+      }
+
+      return getFieldRegressionValue(
+        fieldConfig.fieldKey,
+        latestTask.id,
+        fieldConfig.baselineTaskId
+      )
+    }
+
+    default:
+      return 0
+  }
 }
 
 /**
@@ -97,8 +174,12 @@ async function triggerAlert(
 
   console.log(`[Alert] Triggered alert ${alert.id} for rule ${rule.name}, value: ${value}`)
 
-  // TODO: 发送通知（将在 8.6 实现）
-  // await dispatchNotifications(rule, alert)
+  // 发送通知到配置的渠道
+  try {
+    await dispatchAlertNotifications(alert.id, ruleId)
+  } catch (notifyError) {
+    console.error(`[Alert] Failed to dispatch notifications for alert ${alert.id}:`, notifyError)
+  }
 }
 
 /**

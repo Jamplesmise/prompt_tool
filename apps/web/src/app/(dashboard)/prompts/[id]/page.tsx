@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button, Card, Form, Input, Space, Typography, Row, Col, Spin, Empty, Tabs, Tag } from 'antd'
-import { ArrowLeftOutlined, SaveOutlined, SendOutlined, HistoryOutlined, DiffOutlined, SwapOutlined, LineChartOutlined, InfoCircleOutlined, RobotOutlined, EditOutlined } from '@ant-design/icons'
-import { PromptEditor, VariableList, VersionList, QuickTest, PublishModal, VersionDiff } from '@/components/prompt'
-import { FormSection } from '@/components/common'
+import { ArrowLeftOutlined, SaveOutlined, SendOutlined, HistoryOutlined, DiffOutlined, SwapOutlined, LineChartOutlined, InfoCircleOutlined, RobotOutlined, EditOutlined, LinkOutlined } from '@ant-design/icons'
+import { VariableList, VersionList, QuickTest, PublishModal, VersionDiff, SchemaAssociation } from '@/components/prompt'
+import { FormSection, CodeEditor } from '@/components/common'
 import { RegressionTracker } from '@/components/regression'
 import type { VersionSnapshot } from '@/components/results'
 import {
@@ -48,6 +48,8 @@ export default function PromptDetailPage() {
   const [diffModalOpen, setDiffModalOpen] = useState(false)
   const [selectedVersions, setSelectedVersions] = useState<{ v1?: string; v2?: string }>({})
   const [activeTab, setActiveTab] = useState('variables')
+  const [inputSchemaId, setInputSchemaId] = useState<string | null>(null)
+  const [outputSchemaId, setOutputSchemaId] = useState<string | null>(null)
 
   // 版本对比数据
   const { data: diffData, isLoading: diffLoading } = useVersionDiff(
@@ -92,6 +94,8 @@ export default function PromptDetailPage() {
       })
       setSystemPrompt(prompt.systemPrompt || '')
       setContent(prompt.content)
+      setInputSchemaId(prompt.inputSchemaId || null)
+      setOutputSchemaId(prompt.outputSchemaId || null)
     }
   }, [prompt, form])
 
@@ -107,6 +111,8 @@ export default function PromptDetailPage() {
           systemPrompt,
           content,
           tags: values.tags?.split(',').map((t: string) => t.trim()).filter(Boolean) || [],
+          inputSchemaId: inputSchemaId || undefined,
+          outputSchemaId: outputSchemaId || undefined,
         },
       })
       // 触发保存事件
@@ -114,6 +120,12 @@ export default function PromptDetailPage() {
     } catch {
       // 验证失败
     }
+  }
+
+  // 处理 Schema 关联变更
+  const handleSchemaChange = (newInputId: string | null, newOutputId: string | null) => {
+    setInputSchemaId(newInputId)
+    setOutputSchemaId(newOutputId)
   }
 
   // 发布版本
@@ -128,6 +140,8 @@ export default function PromptDetailPage() {
         systemPrompt,
         content,
         tags: values.tags?.split(',').map((t: string) => t.trim()).filter(Boolean) || [],
+        inputSchemaId: inputSchemaId || undefined,
+        outputSchemaId: outputSchemaId || undefined,
       },
     })
 
@@ -259,11 +273,13 @@ export default function PromptDetailPage() {
               collapsible
               defaultExpanded={!!systemPrompt}
             >
-              <PromptEditor
+              <CodeEditor
                 value={systemPrompt}
                 onChange={setSystemPrompt}
                 height={200}
                 title="System Prompt"
+                language="prompt"
+                showThemeSwitch
               />
             </FormSection>
 
@@ -272,7 +288,14 @@ export default function PromptDetailPage() {
               icon={<EditOutlined />}
               description="使用 {{变量名}} 格式定义变量，如 {{role}}, {{question}}"
             >
-              <PromptEditor value={content} onChange={setContent} height={350} title="User Prompt" />
+              <CodeEditor
+                value={content}
+                onChange={setContent}
+                height={350}
+                title="User Prompt"
+                language="prompt"
+                showThemeSwitch
+              />
             </FormSection>
           </Col>
 
@@ -343,6 +366,28 @@ export default function PromptDetailPage() {
                     modelsLoading={modelsLoading}
                     onTest={handleTest}
                   />
+                ),
+              },
+              {
+                key: 'schema',
+                label: (
+                  <Space>
+                    <LinkOutlined />
+                    结构定义
+                    {(inputSchemaId || outputSchemaId) && (
+                      <Tag color="green" style={{ marginLeft: 4 }}>已关联</Tag>
+                    )}
+                  </Space>
+                ),
+                children: (
+                  <Card size="small">
+                    <SchemaAssociation
+                      inputSchemaId={inputSchemaId}
+                      outputSchemaId={outputSchemaId}
+                      promptVariables={variables}
+                      onChange={handleSchemaChange}
+                    />
+                  </Card>
                 ),
               },
               {

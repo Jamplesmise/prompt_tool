@@ -29,6 +29,7 @@ import {
   TASK_QUEUE_NAME,
   type TaskJobData,
   type TaskJobResult,
+  moveToDeadLetterQueue,
 } from './taskQueue'
 import {
   initProgress,
@@ -639,8 +640,23 @@ export function createTaskWorker(): Worker<TaskJobData, TaskJobResult> {
     console.error('Worker error:', err)
   })
 
-  worker.on('failed', (job, err) => {
+  worker.on('failed', async (job, err) => {
     console.error(`Job ${job?.id} failed:`, err)
+
+    // 将失败任务移至死信队列
+    if (job) {
+      try {
+        await moveToDeadLetterQueue(
+          job.data,
+          job.id ?? job.data.taskId,
+          err.message,
+          job.attemptsMade
+        )
+        console.log(`Job ${job.id} moved to dead letter queue`)
+      } catch (dlqError) {
+        console.error('Failed to move job to DLQ:', dlqError)
+      }
+    }
   })
 
   worker.on('completed', (job) => {

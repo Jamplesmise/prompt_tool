@@ -294,3 +294,41 @@ export function useABTestResults(id: string | undefined) {
     enabled: !!id,
   })
 }
+
+// 结果详情 query key
+const TASK_RESULT_DETAIL_KEY = (taskId: string, resultId: string) => ['task-result-detail', taskId, resultId]
+
+// 获取单个结果详情（含字段级评估）
+export function useTaskResultDetail(taskId: string | undefined, resultId: string | undefined) {
+  return useQuery({
+    queryKey: TASK_RESULT_DETAIL_KEY(taskId ?? '', resultId ?? ''),
+    queryFn: async () => {
+      if (!taskId || !resultId) throw new Error('参数不完整')
+      const response = await tasksService.getResultDetail(taskId, resultId)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!taskId && !!resultId,
+  })
+}
+
+// 字段统计 query key
+const FIELD_STATS_KEY = (taskId: string) => ['field-stats', taskId]
+
+// 获取字段级统计
+export function useFieldStats(taskId: string | undefined) {
+  return useQuery({
+    queryKey: FIELD_STATS_KEY(taskId ?? ''),
+    queryFn: async () => {
+      if (!taskId) throw new Error('任务 ID 不能为空')
+      const response = await tasksService.getFieldStats(taskId)
+      if (response.code !== 200) {
+        throw new Error(response.message)
+      }
+      return response.data
+    },
+    enabled: !!taskId,
+  })
+}

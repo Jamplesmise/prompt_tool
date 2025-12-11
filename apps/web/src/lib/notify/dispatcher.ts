@@ -86,8 +86,9 @@ export async function dispatchAlertNotifications(
           }
 
           case 'INTERNAL': {
-            // TODO: 站内消息实现
-            console.log(`[Dispatcher] Internal notification for channel ${channel.id}`)
+            // 站内消息功能：需要前端通知中心 UI 和消息表支持
+            // 当前仅记录日志，实际推送在 WebSocket/SSE 实现后完成
+            console.log(`[Dispatcher] Internal notification queued for channel ${channel.id}`)
             break
           }
 

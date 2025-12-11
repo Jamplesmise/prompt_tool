@@ -25,7 +25,7 @@ export type { LazyImageProps } from './LazyImage'
 
 // 输入框与编辑器优化组件
 export { CodeEditor } from './CodeEditor'
-export type { CodeEditorProps, CodeEditorLanguage } from './CodeEditor'
+export type { CodeEditorProps, CodeEditorLanguage, CodeEditorTheme } from './CodeEditor'
 
 export { FormField } from './FormField'
 export type { FormFieldProps } from './FormField'
