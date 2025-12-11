@@ -35,6 +35,8 @@ type PromptDetail = Prompt & {
     name: string
     email: string
   }
+  inputSchemaId?: string | null
+  outputSchemaId?: string | null
 }
 
 // 版本列表项
@@ -97,6 +99,11 @@ type TestPromptResult = {
     total: number
   }
   renderedPrompt?: string
+  // 结构化输出
+  parsed?: Record<string, unknown>
+  parseSuccess?: boolean
+  parseError?: string
+  outputFields?: Array<{ key: string; name: string; value: unknown }>
 }
 
 // 创建提示词参数
@@ -116,6 +123,8 @@ type UpdatePromptInput = {
   content?: string
   tags?: string[]
   variables?: PromptVariable[]
+  inputSchemaId?: string
+  outputSchemaId?: string
 }
 
 // 发布版本参数
@@ -291,6 +300,14 @@ export const promptsService = {
   async delete(id: string): Promise<ApiResponse<{ id: string }>> {
     const response = await fetch(`${API_BASE}/prompts/${id}`, {
       method: 'DELETE',
+    })
+    return response.json()
+  },
+
+  // 复制提示词
+  async copy(id: string): Promise<ApiResponse<Prompt>> {
+    const response = await fetch(`${API_BASE}/prompts/${id}/copy`, {
+      method: 'POST',
     })
     return response.json()
   },

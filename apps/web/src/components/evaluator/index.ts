@@ -1,7 +1,6 @@
 export { PresetList } from './PresetList'
 export { EvaluatorTable } from './EvaluatorTable'
 export { EvaluatorForm } from './EvaluatorForm'
-export { CodeEditor } from './CodeEditor'
 export { TestRunner } from './TestRunner'
 export { LLMConfig } from './LLMConfig'
 export { CompositeConfig } from './CompositeConfig'

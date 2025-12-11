@@ -5,6 +5,7 @@ import { Card, Form, Input, Button, Typography, Spin } from 'antd'
 import { appMessage } from '@/lib/message'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useAuth, useRedirectIfAuth } from '@/hooks/useAuth'
+import { t } from '@/lib/i18n'
 
 const { Title, Text } = Typography
 
@@ -23,10 +24,10 @@ export default function LoginPage() {
     try {
       const result = await login(values.email, values.password)
       if (!result.success) {
-        appMessage.error(result.message || '登录失败')
+        appMessage.error(result.message || t('common.failed'))
       }
     } catch {
-      appMessage.error('登录失败，请稍后重试')
+      appMessage.error(t('error.network'))
     } finally {
       setLoading(false)
     }
@@ -47,33 +48,33 @@ export default function LoginPage() {
         <Title level={3} className="!mb-2">
           AI 模型测试平台
         </Title>
-        <Text type="secondary">登录以继续</Text>
+        <Text type="secondary">{t('auth.login')}以继续</Text>
       </div>
 
       <Form name="login" onFinish={onFinish} size="large" autoComplete="off">
         <Form.Item
           name="email"
           rules={[
-            { required: true, message: '请输入邮箱' },
-            { type: 'email', message: '请输入有效的邮箱地址' },
+            { required: true, message: t('validation.required', { field: t('auth.email') }) },
+            { type: 'email', message: t('validation.email') },
           ]}
         >
-          <Input prefix={<UserOutlined />} placeholder="邮箱" />
+          <Input prefix={<UserOutlined />} placeholder={t('auth.email')} />
         </Form.Item>
 
         <Form.Item
           name="password"
           rules={[
-            { required: true, message: '请输入密码' },
-            { min: 6, message: '密码至少6位' },
+            { required: true, message: t('validation.required', { field: t('auth.password') }) },
+            { min: 6, message: t('validation.password') },
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+          <Input.Password prefix={<LockOutlined />} placeholder={t('auth.password')} />
         </Form.Item>
 
         <Form.Item>
           <Button type="primary" htmlType="submit" block loading={loading}>
-            登录
+            {t('auth.login')}
           </Button>
         </Form.Item>
       </Form>

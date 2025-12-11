@@ -13,6 +13,7 @@ import {
   CaretRightOutlined,
   RobotOutlined,
   BarChartOutlined,
+  FieldStringOutlined,
 } from '@ant-design/icons'
 import { PRIMARY } from '@/theme/colors'
 import { useTask, useRunTask, useStopTask, useRetryTask, usePauseTask, useResumeTask, useRefreshTask } from '@/hooks/useTasks'
@@ -21,7 +22,8 @@ import { useSmartAnalysis } from '@/hooks/useAnalysis'
 import { useTaskAnomalyDetection } from '@/hooks/useAnomalyDetection'
 import { TaskOverview } from '@/components/task/TaskOverview'
 import { ResultTable } from '@/components/task/ResultTable'
-import { ResultDetail } from '@/components/task/ResultDetail'
+import { ResultDetailV2 } from '@/components/task/ResultDetailV2'
+import { FieldAnalysisPanel } from '@/components/task/FieldAnalysisPanel'
 import { ExportButton } from '@/components/task/ExportButton'
 import { ABTestResults } from '@/components/task/ABTestResults'
 import { SmartAnalysisPanel } from '@/components/analysis'
@@ -347,6 +349,21 @@ export default function TaskDetailPage() {
               <ResultTable taskId={taskId} onViewDetail={handleViewDetail} />
             ),
           },
+          // 字段分析标签页（仅在任务完成时显示）
+          ...(isTaskCompleted
+            ? [
+                {
+                  key: 'fields',
+                  label: (
+                    <Space>
+                      <FieldStringOutlined />
+                      字段分析
+                    </Space>
+                  ),
+                  children: <FieldAnalysisPanel taskId={taskId} />,
+                },
+              ]
+            : []),
           // 智能分析标签页（仅在任务完成且有失败时显示）
           ...(isTaskCompleted && hasFailed
             ? [
@@ -397,8 +414,9 @@ export default function TaskDetailPage() {
         ]}
       />
 
-      {/* 结果详情抽屉 */}
-      <ResultDetail
+      {/* 结果详情抽屉（升级版，支持字段级评估） */}
+      <ResultDetailV2
+        taskId={taskId}
         result={selectedResult}
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}

@@ -2,9 +2,8 @@
 
 import { useMemo } from 'react'
 import { Form, Select, InputNumber, Alert, Typography, Space } from 'antd'
-import { CodeEditor } from './CodeEditor'
 import { DEFAULT_EVALUATION_PROMPT, SIMPLE_SCORING_PROMPT, COMPARISON_PROMPT } from '@platform/evaluators'
-import { SimpleModelSelector } from '@/components/common'
+import { SimpleModelSelector, CodeEditor } from '@/components/common'
 import type { UnifiedModel } from '@/services/models'
 
 const { Text } = Typography
@@ -133,7 +132,9 @@ export function LLMConfig({ models, loading = false }: LLMConfigProps) {
           value={form.getFieldValue('prompt') || DEFAULT_EVALUATION_PROMPT}
           onChange={(val) => form.setFieldValue('prompt', val)}
           height={300}
-          language="json"
+          language="prompt"
+          title="评估提示词"
+          showThemeSwitch
         />
       </Form.Item>
 

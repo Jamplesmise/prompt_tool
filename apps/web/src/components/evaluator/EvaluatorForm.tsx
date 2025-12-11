@@ -476,8 +476,9 @@ export function EvaluatorForm({
               value={form.getFieldValue('prompt') || DEFAULT_EVALUATION_PROMPT}
               onChange={(val) => form.setFieldValue('prompt', val)}
               height={250}
-              language="json"
+              language="prompt"
               title="评估提示词"
+              showThemeSwitch
             />
           </Form.Item>
 

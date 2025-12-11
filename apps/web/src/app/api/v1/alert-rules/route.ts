@@ -104,7 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证指标值
-    const validMetrics = ['PASS_RATE', 'AVG_LATENCY', 'ERROR_RATE', 'COST']
+    const validMetrics = [
+      'PASS_RATE', 'AVG_LATENCY', 'ERROR_RATE', 'COST',
+      'FIELD_PASS_RATE', 'FIELD_AVG_SCORE', 'FIELD_REGRESSION'
+    ]
     if (!validMetrics.includes(body.metric)) {
       return NextResponse.json(badRequest('无效的监控指标'), { status: 400 })
     }

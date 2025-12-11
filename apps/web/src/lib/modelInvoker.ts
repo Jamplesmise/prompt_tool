@@ -1,6 +1,6 @@
 // 模型调用器 - 封装 LLM API 调用
 
-import { decryptApiKey } from './encryption'
+import { decryptApiKey, isEncrypted } from './encryption'
 import type { TokenUsage } from '@platform/shared'
 
 // OneHub 配置（用于 FastGPT 模型）
@@ -56,13 +56,64 @@ export async function invokeModel(
     return invokeFastGPTModel(model, input, startTime)
   }
 
-  const apiKey = decryptApiKey(model.provider.apiKey)
+  // 解密 API Key
+  let apiKey: string
+  const rawApiKey = model.provider.apiKey
+
+  if (!rawApiKey) {
+    // 尝试使用环境变量中的备用 API Key
+    const fallbackKey = process.env.CHAT_API_KEY
+    if (fallbackKey) {
+      console.log('[ModelInvoker] Using fallback CHAT_API_KEY from environment')
+      apiKey = fallbackKey
+    } else {
+      throw new ModelInvokeError('API Key not configured for this provider', 400)
+    }
+  } else if (isEncrypted(rawApiKey)) {
+    // 检查是否已加密
+    try {
+      apiKey = decryptApiKey(rawApiKey)
+    } catch (decryptError) {
+      console.error('Failed to decrypt API key:', decryptError)
+      // 尝试使用环境变量中的备用 API Key
+      const fallbackKey = process.env.CHAT_API_KEY
+      if (fallbackKey) {
+        console.log('[ModelInvoker] Decrypt failed, using fallback CHAT_API_KEY from environment')
+        apiKey = fallbackKey
+      } else {
+        throw new ModelInvokeError(
+          'Failed to decrypt API key. Please check ENCRYPTION_KEY environment variable or re-configure the provider.',
+          500
+        )
+      }
+    }
+  } else {
+    // 如果未加密，直接使用（向后兼容）
+    apiKey = rawApiKey
+  }
+
   const providerType = model.provider.type.toLowerCase()
+
+  // 如果使用了 fallback API Key，同时检查是否需要使用 fallback baseUrl
+  let baseUrl = model.provider.baseUrl
+  if (!baseUrl && process.env.OPENAI_BASE_URL) {
+    console.log('[ModelInvoker] Using fallback OPENAI_BASE_URL from environment')
+    baseUrl = process.env.OPENAI_BASE_URL
+  }
+
+  // 更新 model 的 baseUrl（临时）
+  const effectiveModel = {
+    ...model,
+    provider: {
+      ...model.provider,
+      baseUrl: baseUrl || model.provider.baseUrl,
+    },
+  }
 
   // 构建请求
   const { url, headers, body } = buildRequest(
     providerType,
-    model,
+    effectiveModel,
     apiKey,
     input
   )

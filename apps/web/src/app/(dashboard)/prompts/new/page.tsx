@@ -4,8 +4,8 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, Form, Input, Space, Typography, Row, Col } from 'antd'
 import { ArrowLeftOutlined, SaveOutlined, InfoCircleOutlined, EditOutlined, TagsOutlined, RobotOutlined } from '@ant-design/icons'
-import { PromptEditor, VariableList } from '@/components/prompt'
-import { FormSection } from '@/components/common'
+import { VariableList } from '@/components/prompt'
+import { FormSection, CodeEditor } from '@/components/common'
 import { useCreatePrompt } from '@/hooks/usePrompts'
 import { extractVariables } from '@/lib/template'
 
@@ -98,11 +98,13 @@ export default function NewPromptPage() {
               collapsible
               defaultExpanded={false}
             >
-              <PromptEditor
+              <CodeEditor
                 value={systemPrompt}
                 onChange={setSystemPrompt}
                 height={200}
                 title="System Prompt"
+                language="prompt"
+                showThemeSwitch
               />
             </FormSection>
 
@@ -111,7 +113,14 @@ export default function NewPromptPage() {
               icon={<EditOutlined />}
               description="使用 {{变量名}} 格式定义变量，如 {{role}}, {{question}}"
             >
-              <PromptEditor value={content} onChange={setContent} height={350} title="User Prompt" />
+              <CodeEditor
+                value={content}
+                onChange={setContent}
+                height={350}
+                title="User Prompt"
+                language="prompt"
+                showThemeSwitch
+              />
             </FormSection>
           </Col>
 

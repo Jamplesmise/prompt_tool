@@ -6,6 +6,7 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { extractVariables } from '@/lib/template'
 import { ERROR_CODES } from '@platform/shared'
+import { validatePagination, validateKeyword, ValidationError } from '@/lib/validation'
 
 // 强制动态渲染，避免构建时预渲染错误
 export const dynamic = 'force-dynamic'
@@ -19,11 +20,21 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams
-    const page = parseInt(searchParams.get('page') || '1', 10)
-    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10)
-    const keyword = searchParams.get('keyword') || ''
+
+    // 输入验证
+    const { page, pageSize } = validatePagination(searchParams)
+    let keyword: string | undefined
+    try {
+      keyword = validateKeyword(searchParams.get('keyword'))
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        return NextResponse.json(badRequest(err.message), { status: 400 })
+      }
+      throw err
+    }
+
     const tagsParam = searchParams.get('tags')
-    const tags = tagsParam ? tagsParam.split(',').filter(Boolean) : []
+    const tags = tagsParam ? tagsParam.split(',').filter(Boolean).slice(0, 20) : [] // 限制标签数量
 
     // 构建查询条件
     const conditions: PrismaTypes.PromptWhereInput[] = []

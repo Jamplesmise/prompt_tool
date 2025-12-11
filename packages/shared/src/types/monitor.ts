@@ -103,7 +103,15 @@ export type MetricsQuery = {
 // 告警规则类型
 // ============================================
 
-export type AlertMetric = 'PASS_RATE' | 'AVG_LATENCY' | 'ERROR_RATE' | 'COST'
+// 告警指标类型（包含字段级）
+export type AlertMetric =
+  | 'PASS_RATE'           // 总体通过率
+  | 'AVG_LATENCY'         // 平均延迟
+  | 'ERROR_RATE'          // 错误率
+  | 'COST'                // 成本
+  | 'FIELD_PASS_RATE'     // 字段通过率
+  | 'FIELD_AVG_SCORE'     // 字段平均分
+  | 'FIELD_REGRESSION'    // 字段回归检测
 
 export type AlertCondition = 'LT' | 'GT' | 'EQ' | 'LTE' | 'GTE'
 
@@ -111,10 +119,20 @@ export type AlertSeverity = 'WARNING' | 'CRITICAL' | 'URGENT'
 
 export type AlertStatus = 'TRIGGERED' | 'ACKNOWLEDGED' | 'RESOLVED'
 
+// 字段级告警配置
+export type FieldAlertConfig = {
+  fieldKey: string         // 目标字段 key
+  fieldName?: string       // 字段名称（显示用）
+  isCritical?: boolean     // 是否为关键字段
+  baselineTaskId?: string  // 回归检测的基准任务 ID
+}
+
 export type AlertScope = {
   taskIds?: string[]
   promptIds?: string[]
   modelIds?: string[]
+  // 字段级告警配置（仅 FIELD_* 指标使用）
+  fieldConfig?: FieldAlertConfig
 }
 
 export type AlertRule = {

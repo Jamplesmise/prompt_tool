@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { generateApiToken } from '@/lib/token/generator'
 import { ERROR_CODES } from '@platform/shared'
+import { withRateLimit, RATE_LIMIT_PRESETS } from '@/lib/rateLimit'
 
 // 强制动态渲染，避免构建时预渲染错误
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,10 @@ export async function GET(request: NextRequest) {
     if (!session) {
       return NextResponse.json(unauthorized(), { status: 401 })
     }
+
+    // 速率限制（已登录用户，使用 userId）
+    const rateLimitResponse = await withRateLimit(request, 'tokens/list', RATE_LIMIT_PRESETS.standard, session.id)
+    if (rateLimitResponse) return rateLimitResponse
 
     const searchParams = request.nextUrl.searchParams
     const page = parseInt(searchParams.get('page') || '1', 10)
@@ -63,6 +68,10 @@ export async function POST(request: NextRequest) {
     if (!session) {
       return NextResponse.json(unauthorized(), { status: 401 })
     }
+
+    // 敏感操作速率限制（每分钟 10 次）
+    const rateLimitResponse = await withRateLimit(request, 'tokens/create', RATE_LIMIT_PRESETS.sensitive, session.id)
+    if (rateLimitResponse) return rateLimitResponse
 
     const body = await request.json()
     const { name, scopes, expiresAt } = body

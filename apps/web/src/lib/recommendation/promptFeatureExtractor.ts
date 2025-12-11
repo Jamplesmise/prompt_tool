@@ -104,7 +104,7 @@ const EXTRACTION_PATTERNS = [
 const QA_PATTERNS = [
   '回答', '问题', '解答',
   'answer', 'question', 'respond',
-  '根据.*回答', '请回答'
+  '根据', '请回答'
 ]
 
 /**
@@ -143,18 +143,11 @@ const SCORE_PATTERNS = [
 ]
 
 /**
- * 检查文本是否包含任一模式
+ * 检查文本是否包含任一模式（使用字符串匹配避免 ReDoS 风险）
  */
 function containsAny(text: string, patterns: string[]): boolean {
   const lowerText = text.toLowerCase()
   return patterns.some(p => lowerText.includes(p.toLowerCase()))
-}
-
-/**
- * 检查文本是否匹配任一正则模式
- */
-function matchesAny(text: string, patterns: string[]): boolean {
-  return patterns.some(p => new RegExp(p, 'i').test(text))
 }
 
 /**

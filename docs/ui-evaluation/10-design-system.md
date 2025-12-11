@@ -630,7 +630,7 @@ export const antdTheme: ThemeConfig = {
 
 ### 9.2 UI/UX 优化阶段（V2 改造）
 
-基于 `.claude/design-ui-plan/` 的详细页面优化计划：
+基于 `docs/design-ui-plan/` 的详细页面优化计划：
 
 | 阶段 | 名称 | 优先级 | 核心内容 |
 |------|------|--------|----------|
@@ -689,7 +689,7 @@ export const antdTheme: ThemeConfig = {
 
 ## 十、深度优化阶段（V3）
 
-> 基于 `.claude/product-deep-optimization/` 的深度优化计划，目标将产品从 40 分提升到 80 分
+> 基于 `docs/product-deep-optimization/` 的深度优化计划，目标将产品从 40 分提升到 80 分
 
 ### 10.1 优化方向概览
 

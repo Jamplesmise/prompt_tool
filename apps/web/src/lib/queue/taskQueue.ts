@@ -17,13 +17,23 @@ export type TaskJobResult = {
   error?: string
 }
 
+// 死信队列任务数据
+export type DeadLetterJobData = TaskJobData & {
+  originalJobId: string
+  failedAt: string
+  failureReason: string
+  attemptsMade: number
+}
+
 // 队列名称
 export const TASK_QUEUE_NAME = 'task-execution'
+export const DEAD_LETTER_QUEUE_NAME = 'task-execution-dlq'
 
 // 使用全局变量缓存队列实例（避免热重载时重复创建）
 const globalForQueue = globalThis as unknown as {
   taskQueue: Queue<TaskJobData, TaskJobResult> | undefined
   taskQueueEvents: QueueEvents | undefined
+  deadLetterQueue: Queue<DeadLetterJobData> | undefined
 }
 
 /**
@@ -184,4 +194,124 @@ export async function resumeQueue(): Promise<void> {
 export async function clearQueue(): Promise<void> {
   const queue = getTaskQueue()
   await queue.obliterate({ force: true })
+}
+
+/**
+ * 获取死信队列（延迟初始化）
+ * 用于存储处理失败且超过重试次数的任务
+ */
+export function getDeadLetterQueue(): Queue<DeadLetterJobData> {
+  if (!globalForQueue.deadLetterQueue) {
+    globalForQueue.deadLetterQueue = new Queue<DeadLetterJobData>(DEAD_LETTER_QUEUE_NAME, {
+      connection: redis,
+      prefix: BULLMQ_PREFIX,
+      defaultJobOptions: {
+        removeOnComplete: false,  // 保留所有死信任务用于分析
+        removeOnFail: false,
+      },
+    })
+  }
+  return globalForQueue.deadLetterQueue
+}
+
+/**
+ * 将失败任务移至死信队列
+ */
+export async function moveToDeadLetterQueue(
+  jobData: TaskJobData,
+  originalJobId: string,
+  failureReason: string,
+  attemptsMade: number
+): Promise<string> {
+  const dlq = getDeadLetterQueue()
+  const job = await dlq.add(
+    'dead-letter',
+    {
+      ...jobData,
+      originalJobId,
+      failedAt: new Date().toISOString(),
+      failureReason,
+      attemptsMade,
+    },
+    {
+      jobId: `dlq-${originalJobId}-${Date.now()}`,
+    }
+  )
+  return job.id ?? originalJobId
+}
+
+/**
+ * 获取死信队列中的任务列表
+ */
+export async function getDeadLetterJobs(
+  start = 0,
+  end = 50
+): Promise<Array<{
+  id: string
+  data: DeadLetterJobData
+  timestamp: number
+}>> {
+  const dlq = getDeadLetterQueue()
+  const jobs = await dlq.getJobs(['waiting', 'delayed'], start, end)
+
+  return jobs.map(job => ({
+    id: job.id ?? '',
+    data: job.data,
+    timestamp: job.timestamp,
+  }))
+}
+
+/**
+ * 从死信队列重试任务
+ */
+export async function retryFromDeadLetterQueue(dlqJobId: string): Promise<string | null> {
+  const dlq = getDeadLetterQueue()
+  const job = await dlq.getJob(dlqJobId)
+
+  if (!job) {
+    return null
+  }
+
+  // 将任务重新入队
+  const newJobId = await enqueueTask(job.data.taskId, {
+    priority: job.data.priority,
+    resumeFrom: job.data.resumeFrom,
+  })
+
+  // 从死信队列移除
+  await job.remove()
+
+  return newJobId
+}
+
+/**
+ * 清空死信队列
+ */
+export async function clearDeadLetterQueue(): Promise<void> {
+  const dlq = getDeadLetterQueue()
+  await dlq.obliterate({ force: true })
+}
+
+/**
+ * 获取死信队列统计信息
+ */
+export async function getDeadLetterStats(): Promise<{
+  total: number
+  oldest?: string
+  newest?: string
+}> {
+  const dlq = getDeadLetterQueue()
+  const jobs = await dlq.getJobs(['waiting', 'delayed'])
+
+  if (jobs.length === 0) {
+    return { total: 0 }
+  }
+
+  const sorted = jobs.sort((a, b) => a.timestamp - b.timestamp)
+
+  return {
+    total: jobs.length,
+    oldest: sorted[0]?.data.failedAt,
+    newest: sorted[sorted.length - 1]?.data.failedAt,
+  }
 }

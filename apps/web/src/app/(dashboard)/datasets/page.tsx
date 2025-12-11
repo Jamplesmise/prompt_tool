@@ -10,6 +10,8 @@ import {
   UploadOutlined,
   EyeOutlined,
   MoreOutlined,
+  LinkOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { MenuProps } from 'antd'
@@ -20,6 +22,7 @@ import {
   DatasetUploadModal,
   DatasetCard,
   ViewToggle,
+  TemplateDownloadModal,
 } from '@/components/dataset'
 import type { ViewMode } from '@/components/dataset'
 import { LoadingState, ErrorState, EmptyState } from '@/components/common'
@@ -37,6 +40,7 @@ export default function DatasetsPage() {
   const [keyword, setKeyword] = useState('')
   const [searchValue, setSearchValue] = useState('')
   const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
 
   const { data, isLoading, error, refetch } = useDatasets({ page, pageSize, keyword })
@@ -106,6 +110,19 @@ export default function DatasetsPage() {
       key: 'with-expected',
       label: '带期望输出模板',
       onClick: () => datasetsService.downloadTemplate('with-expected'),
+    },
+    { type: 'divider' },
+    {
+      key: 'custom',
+      icon: <LinkOutlined />,
+      label: '根据结构定义生成',
+      onClick: () => setTemplateModalOpen(true),
+    },
+    {
+      key: 'ai-generate',
+      icon: <RobotOutlined />,
+      label: 'AI 智能生成结构',
+      onClick: () => router.push('/schemas/ai-assistant'),
     },
   ]
 
@@ -279,6 +296,18 @@ export default function DatasetsPage() {
         </Title>
         <Space>
           <ViewToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            icon={<LinkOutlined />}
+            onClick={() => router.push('/schemas')}
+          >
+            结构定义
+          </Button>
+          <Button
+            icon={<RobotOutlined />}
+            onClick={() => router.push('/schemas/ai-assistant')}
+          >
+            AI 助手
+          </Button>
           <Dropdown menu={{ items: templateMenuItems }}>
             <Button icon={<DownloadOutlined />}>下载模板</Button>
           </Dropdown>
@@ -332,6 +361,11 @@ export default function DatasetsPage() {
         onOk={handleUpload}
         onCancel={() => setUploadModalOpen(false)}
         loading={createDataset.isPending}
+      />
+
+      <TemplateDownloadModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
       />
     </div>
   )

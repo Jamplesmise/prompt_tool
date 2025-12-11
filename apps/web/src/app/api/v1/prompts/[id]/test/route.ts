@@ -5,6 +5,8 @@ import { decryptApiKey } from '@/lib/encryption'
 import { success, error, unauthorized, badRequest } from '@/lib/api'
 import { renderTemplate } from '@/lib/template'
 import { ERROR_CODES } from '@platform/shared'
+import type { OutputFieldDefinition, ParseMode, ParseResult } from '@platform/shared'
+import { createOutputParser } from '@platform/shared'
 
 // 强制动态渲染，避免构建时预渲染错误
 export const dynamic = 'force-dynamic'
@@ -30,9 +32,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // 获取提示词
+    // 获取提示词（包含 OutputSchema 用于结构化解析）
     const prompt = await prisma.prompt.findUnique({
       where: { id },
+      include: {
+        outputSchema: true,
+      },
     })
 
     if (!prompt) {
@@ -161,6 +166,40 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
       }
 
+      // 结构化输出解析
+      let parsed: Record<string, unknown> | undefined
+      let parseSuccess = false
+      let parseError: string | undefined
+      let outputFields: Array<{ key: string; name: string; value: unknown }> | undefined
+
+      if (prompt.outputSchema) {
+        const schema = prompt.outputSchema
+        const parseMode = (schema.parseMode as ParseMode) || 'JSON_EXTRACT'
+        const parseConfig = schema.parseConfig as Record<string, unknown> | undefined
+        const fields = schema.fields as OutputFieldDefinition[]
+
+        try {
+          const parser = createOutputParser(parseMode, parseConfig)
+          const parseResult: ParseResult = parser.parse(output)
+
+          if (parseResult.success && parseResult.data) {
+            parseSuccess = true
+            parsed = parseResult.data
+
+            // 生成字段列表（按 OutputSchema 字段定义顺序）
+            outputFields = fields.map((field) => ({
+              key: field.key,
+              name: field.name,
+              value: parseResult.data?.[field.key],
+            }))
+          } else {
+            parseError = parseResult.error
+          }
+        } catch (e) {
+          parseError = e instanceof Error ? e.message : '解析失败'
+        }
+      }
+
       return NextResponse.json(
         success({
           success: true,
@@ -168,6 +207,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           latencyMs,
           tokens,
           renderedPrompt: renderedContent,
+          // 结构化输出
+          parsed,
+          parseSuccess,
+          parseError,
+          outputFields,
         })
       )
     } catch (fetchError) {

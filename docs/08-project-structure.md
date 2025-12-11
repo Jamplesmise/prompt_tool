@@ -4,9 +4,11 @@
 
 ```
 ai-eval-platform/
-├── .claude/                    # AI 开发相关
-│   ├── design/                 # 设计文档输出
-│   └── plan/                   # 执行计划输出
+├── .claude/                    # AI 开发配置
+│   ├── CLAUDE.md               # AI 开发指引入口
+│   ├── 开发理念.md              # 熵控制驱动开发理念
+│   ├── agents/                 # Agent 工作流配置
+│   └── skills/                 # AI 技能模板
 │
 ├── packages/                   # 共享包
 │   ├── shared/                 # @platform/shared
@@ -17,18 +19,25 @@ ai-eval-platform/
 │   └── sandbox/                # 代码沙箱
 │
 ├── docs/                       # 文档
-│   ├── 01-product-scope.md
-│   ├── 02-page-spec.md
-│   ├── 03-api-spec.md
-│   ├── 04-database-schema.md
-│   ├── 05-evaluator-spec.md
-│   ├── 06-task-flow.md
-│   ├── 07-ui-convention.md
-│   └── 08-project-structure.md
+│   ├── 01-product-scope.md     # 功能边界、术语定义
+│   ├── 02-page-spec.md         # 页面布局、组件规格
+│   ├── 03-api-spec.md          # API 接口定义
+│   ├── 04-database-schema.md   # 数据库 Schema
+│   ├── 05-evaluator-spec.md    # 评估器规范
+│   ├── 06-task-flow.md         # 任务执行流程
+│   ├── 07-ui-convention.md     # UI 组件规范
+│   ├── 08-project-structure.md # 项目结构说明
+│   ├── 09-deployment.md        # 部署配置
+│   ├── 10-troubleshooting.md   # 问题排查
+│   ├── 11-design-system.md     # 设计系统规范
+│   ├── phases/                 # 核心开发阶段 (Phase 0-11)
+│   ├── design-system/          # UI 设计系统 (5 阶段)
+│   ├── design-ui-plan/         # UI 功能开发 (9 模块)
+│   ├── integration-plan/       # 系统集成计划 (6 阶段)
+│   └── product-deep-optimization/  # 产品深度优化 (5 阶段)
 │
 ├── docker/                     # Docker 配置
 │
-├── CLAUDE.md                   # AI 开发指引
 ├── pnpm-workspace.yaml
 ├── package.json
 └── tsconfig.base.json
@@ -306,16 +315,59 @@ apps/web/
 │   │   ├── evaluators.ts
 │   │   └── tasks.ts
 │   │
-│   ├── lib/                    # 工具函数
-│   │   ├── db.ts               # Prisma 客户端
+│   ├── lib/                    # 工具函数与核心模块
+│   │   ├── prisma.ts           # Prisma 客户端
 │   │   ├── auth.ts             # 认证工具
-│   │   ├── response.ts         # API 响应封装
-│   │   ├── queue.ts            # BullMQ 队列
-│   │   ├── sandbox.ts          # 沙箱调用
-│   │   └── llm.ts              # LLM 调用封装
+│   │   ├── api.ts              # API 响应封装
+│   │   ├── redis.ts            # Redis 客户端
+│   │   ├── encryption.ts       # 加密工具
+│   │   ├── validation.ts       # 输入验证
+│   │   ├── rateLimit.ts        # 速率限制
+│   │   ├── logger.ts           # 统一日志
+│   │   ├── modelInvoker.ts     # LLM 调用封装
+│   │   ├── taskExecutor.ts     # 任务执行器
+│   │   ├── concurrencyLimiter.ts # 并发控制
+│   │   │
+│   │   ├── i18n/               # 国际化
+│   │   │   ├── index.ts
+│   │   │   └── locales/
+│   │   │
+│   │   ├── queue/              # BullMQ 队列
+│   │   │   ├── taskQueue.ts
+│   │   │   └── taskWorker.ts
+│   │   │
+│   │   ├── scheduler/          # 定时调度
+│   │   │   └── schedulerWorker.ts
+│   │   │
+│   │   ├── alerting/           # 告警系统
+│   │   │   └── detector.ts
+│   │   │
+│   │   ├── notify/             # 通知渠道
+│   │   │   ├── email.ts
+│   │   │   └── webhook.ts
+│   │   │
+│   │   ├── analysis/           # 结果分析
+│   │   │   └── anomalyDetector.ts
+│   │   │
+│   │   ├── comparison/         # 对比分析
+│   │   │   └── metricsCalculator.ts
+│   │   │
+│   │   ├── branch/             # 分支管理
+│   │   │   └── branchService.ts
+│   │   │
+│   │   ├── dataset/            # 数据集版本
+│   │   │   └── versionService.ts
+│   │   │
+│   │   ├── permission/         # 权限系统
+│   │   │   └── permissions.ts
+│   │   │
+│   │   ├── mongodb/            # MongoDB 集成
+│   │   │   └── connection.ts
+│   │   │
+│   │   └── audit/              # 审计日志
+│   │       └── logger.ts
 │   │
-│   └── workers/                # 后台 Worker
-│       └── task-executor.ts
+│   └── middleware.ts           # 全局中间件
 │
 ├── prisma/
 │   ├── schema.prisma           # 数据库模型

@@ -30,7 +30,6 @@ export default function EvaluatorsPage() {
   }
 
   const handleViewDocs = () => {
-    // TODO: 跳转到文档页面
     window.open('/docs/evaluators', '_blank')
   }
 
@@ -107,8 +106,8 @@ export default function EvaluatorsPage() {
         evaluator={detailEvaluator}
         onClose={() => setDetailEvaluator(null)}
         onUse={() => {
-          // TODO: 跳转到创建任务页面并预选该评估器
           setDetailEvaluator(null)
+          // 跳转到创建任务页面（评估器选择在任务创建表单中完成）
           router.push('/tasks/new')
         }}
       />
