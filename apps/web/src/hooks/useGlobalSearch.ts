@@ -55,8 +55,8 @@ export function useGlobalSearch(
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>()
-  const abortControllerRef = useRef<AbortController>()
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const abortControllerRef = useRef<AbortController | undefined>(undefined)
 
   const search = useCallback(async (query: string) => {
     // 清除之前的防抖定时器

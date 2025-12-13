@@ -30,6 +30,7 @@ import { Breadcrumb } from '@/components/common'
 import { TeamSelector } from '@/components/team/TeamSelector'
 import { GlobalHotkeys } from '@/components/global'
 import { TaskCompleteNotification } from '@/components/guidance'
+import { CopilotPanel } from '@/components/goi'
 
 const menuData = [
   {
@@ -185,6 +186,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Breadcrumb />
         {children}
       </div>
+      {/* AI Copilot 面板 */}
+      <CopilotPanel />
     </ProLayout>
   )
 }

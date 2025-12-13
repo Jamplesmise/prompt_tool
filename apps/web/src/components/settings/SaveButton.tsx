@@ -46,7 +46,7 @@ const STATE_CONFIG: Record<SaveButtonState, {
 
 export function SaveButton({ state, onClick, disabled, errorMessage }: SaveButtonProps) {
   const config = STATE_CONFIG[state]
-  const timerRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     return () => {

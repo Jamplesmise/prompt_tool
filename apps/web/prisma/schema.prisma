@@ -1105,3 +1105,72 @@ model TaskTemplate {
   @@index([isPublic])
   @@map("task_templates")
 }
+
+// ============================================
+// GOI (Guided Orchestration Intelligence) 模块
+// ============================================
+
+// GOI 事件表
+model GoiEvent {
+  id        String   @id @default(cuid())
+  sessionId String   @map("session_id")
+  type      String   // 事件类型
+  category  String   // 分类：operation/flow/collaboration/context
+  source    String   // 来源：user/ai/system
+  payload   Json     // 事件数据
+  metadata  Json?    // 元数据
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([type])
+  @@index([category])
+  @@index([createdAt])
+  @@index([sessionId, createdAt])
+  @@map("goi_events")
+}
+
+// GOI 快照表
+model GoiSnapshot {
+  id            String   @id @default(cuid())
+  sessionId     String   @map("session_id")
+  todoItemId    String?  @map("todo_item_id")
+  trigger       String   // 触发原因：todo_start/checkpoint/compact/manual
+  sessionState  Json     @map("session_state")  // 会话状态
+  todoState     Json?    @map("todo_state")     // TODO 状态
+  resourceState Json?    @map("resource_state") // 资源状态
+  contextState  Json?    @map("context_state")  // 上下文状态
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([sessionId, createdAt])
+  @@map("goi_snapshots")
+}
+
+// GOI TODO List - 待办列表
+model GoiTodoList {
+  id          String   @id @default(cuid())
+  sessionId   String   @map("session_id")
+  goal        String   // 用户目标描述
+  goalAnalysis String? @map("goal_analysis") // 目标分析
+  status      String   // planning | ready | running | paused | completed | failed | cancelled
+  items       Json     // TODO Item 数组 (JSON)
+  currentIdx  Int      @default(0) @map("current_idx") // 当前执行项索引
+  progress    Int      @default(0) // 进度 0-100
+  totalItems  Int      @default(0) @map("total_items")
+  completed   Int      @default(0) // 已完成项数
+  failed      Int      @default(0) // 失败项数
+  skipped     Int      @default(0) // 跳过项数
+  metadata    Json?    // 额外元数据
+  createdBy   String?  @map("created_by")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  version     Int      @default(1) // 乐观锁版本
+
+  @@index([sessionId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("goi_todo_lists")
+}

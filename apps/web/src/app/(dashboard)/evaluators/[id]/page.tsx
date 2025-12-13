@@ -1,5 +1,6 @@
 'use client'
 
+import { use } from 'react'
 import { Button, Typography, Spin, Empty, Space } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
@@ -13,11 +14,11 @@ import type { CodeLanguage } from '@/lib/sandbox'
 const { Title } = Typography
 
 type PageProps = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 export default function EditEvaluatorPage({ params }: PageProps) {
-  const { id } = params
+  const { id } = use(params)
   const router = useRouter()
   const { data: evaluator, isLoading, error } = useEvaluator(id)
   const { data: models = [], isLoading: modelsLoading } = useModels()

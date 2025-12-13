@@ -50,6 +50,8 @@ import type { ConnectionState } from '@/components/model'
 import type { ProviderWithModels, ModelPricing, UnifiedModel } from '@/services/models'
 import { ModelConfiguredTip } from '@/components/guidance'
 import { ModelTypeEnum, MODEL_TYPE_CONFIG } from '@/types/fastgpt'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -104,6 +106,49 @@ export default function ModelsPage() {
 
   // 统一模型列表
   const models = useMemo(() => unifiedData?.models || [], [unifiedData])
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.ADD_PROVIDER]: () => setAddProviderOpen(true),
+    [GOI_DIALOG_IDS.ADD_MODEL]: () => {
+      // 添加模型需要选择供应商，使用第一个可用的供应商
+      const firstProvider = providers?.[0]
+      if (firstProvider) {
+        setAddModelProviderId(firstProvider.id)
+      } else {
+        // 如果没有供应商，先打开添加供应商弹窗
+        setAddProviderOpen(true)
+      }
+    },
+    [GOI_DIALOG_IDS.EDIT_PROVIDER]: () => {
+      // 编辑供应商需要选择一个供应商，使用第一个
+      const firstProvider = providers?.[0]
+      if (firstProvider) {
+        setEditProvider(firstProvider)
+      }
+    },
+    [GOI_DIALOG_IDS.EDIT_MODEL]: () => {
+      // 编辑模型需要选择一个模型，使用第一个
+      const firstModel = models?.[0]
+      if (firstModel) {
+        setEditModel({
+          id: firstModel.id,
+          name: firstModel.name,
+          modelId: firstModel.id,
+          isActive: firstModel.isActive,
+        })
+      }
+    },
+    [GOI_DIALOG_IDS.TEST_MODEL]: () => {
+      // 测试模型，使用第一个模型
+      const firstModel = models?.[0]
+      if (firstModel) {
+        setCurrentTest({ modelName: firstModel.name, providerName: firstModel.provider })
+        setTestModalOpen(true)
+        testModel(firstModel.id)
+      }
+    },
+  })
 
   // 筛选后的数据
   const filteredModels = useMemo(() => {

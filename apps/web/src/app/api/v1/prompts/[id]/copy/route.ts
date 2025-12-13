@@ -8,7 +8,7 @@ import { ERROR_CODES } from '@platform/shared'
 // POST /api/v1/prompts/[id]/copy - 复制提示词
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession()
@@ -16,7 +16,7 @@ export async function POST(
       return NextResponse.json(unauthorized(), { status: 401 })
     }
 
-    const { id } = params
+    const { id } = await params
 
     // 获取原始提示词
     const original = await prisma.prompt.findUnique({

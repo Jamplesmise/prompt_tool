@@ -36,6 +36,8 @@ import { AlertRuleModal } from '@/components/monitor'
 import type { AlertRuleListItem, AlertListItem } from '@/services/alerts'
 import type { AlertSeverity, AlertStatus } from '@platform/shared'
 import dayjs from 'dayjs'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title, Text } = Typography
 
@@ -68,6 +70,21 @@ const conditionNames: Record<string, string> = {
 
 export default function AlertsPage() {
   const [activeTab, setActiveTab] = useState('alerts')
+  // 将弹窗状态提升到页面级别，以便 GOI 可以控制
+  const [ruleModalOpen, setRuleModalOpen] = useState(false)
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_ALERT_RULE]: () => {
+      // 切换到规则 tab 并打开创建弹窗
+      setActiveTab('rules')
+      setRuleModalOpen(true)
+    },
+    [GOI_DIALOG_IDS.EDIT_ALERT_RULE]: () => {
+      // 编辑告警规则，切换到规则 tab
+      setActiveTab('rules')
+    },
+  })
 
   return (
     <div style={{ padding: 24 }}>
@@ -86,7 +103,14 @@ export default function AlertsPage() {
           ]}
         />
 
-        {activeTab === 'alerts' ? <AlertsTable /> : <AlertRulesTable />}
+        {activeTab === 'alerts' ? (
+          <AlertsTable />
+        ) : (
+          <AlertRulesTable
+            modalOpen={ruleModalOpen}
+            setModalOpen={setRuleModalOpen}
+          />
+        )}
       </Card>
     </div>
   )
@@ -217,10 +241,14 @@ function AlertsTable() {
   )
 }
 
-function AlertRulesTable() {
+type AlertRulesTableProps = {
+  modalOpen: boolean
+  setModalOpen: (open: boolean) => void
+}
+
+function AlertRulesTable({ modalOpen, setModalOpen }: AlertRulesTableProps) {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
-  const [modalOpen, setModalOpen] = useState(false)
 
   const { data, isLoading, refetch } = useAlertRules({ page, pageSize })
   const deleteMutation = useDeleteAlertRule()

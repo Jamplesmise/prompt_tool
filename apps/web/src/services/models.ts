@@ -83,7 +83,8 @@ type CreateModelInput = {
   modelId: string
   config?: {
     temperature?: number
-    maxTokens?: number
+    maxInputTokens?: number
+    maxOutputTokens?: number
   }
   pricing?: ModelPricing
 }
@@ -94,7 +95,8 @@ type UpdateModelInput = {
   modelId?: string
   config?: {
     temperature?: number
-    maxTokens?: number
+    maxInputTokens?: number
+    maxOutputTokens?: number
   }
   pricing?: ModelPricing
   isActive?: boolean

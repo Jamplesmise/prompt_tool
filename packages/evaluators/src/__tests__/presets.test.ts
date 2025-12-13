@@ -112,7 +112,7 @@ describe('预置评估器测试', () => {
     })
 
     it('缺少 pattern 参数应返回错误', () => {
-      const result = regex(createInput('test'), {})
+      const result = regex(createInput('test'), {} as never)
       expect(result.passed).toBe(false)
       expect(result.reason).toContain('缺少正则表达式')
     })
@@ -160,7 +160,7 @@ describe('预置评估器测试', () => {
     })
 
     it('缺少 schema 参数应返回错误', () => {
-      const result = jsonSchema(createInput('{}'), {})
+      const result = jsonSchema(createInput('{}'), {} as never)
       expect(result.passed).toBe(false)
       expect(result.reason).toContain('缺少 JSON Schema')
     })

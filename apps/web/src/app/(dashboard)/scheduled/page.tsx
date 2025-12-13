@@ -7,6 +7,8 @@ import ScheduledTaskTable from '@/components/scheduled/ScheduledTaskTable'
 import CreateScheduledModal from '@/components/scheduled/CreateScheduledModal'
 import ExecutionHistory from '@/components/scheduled/ExecutionHistory'
 import type { ScheduledTaskListItem } from '@/services/scheduledTasks'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -14,6 +16,20 @@ export default function ScheduledTasksPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<ScheduledTaskListItem | null>(null)
   const [historyTask, setHistoryTask] = useState<ScheduledTaskListItem | null>(null)
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_SCHEDULED]: () => {
+      setEditingTask(null)
+      setCreateModalOpen(true)
+    },
+    [GOI_DIALOG_IDS.EDIT_SCHEDULED]: () => {
+      // 编辑定时任务，需要用户通过表格选择
+      // 这里仅打开创建弹窗，用户需要先从表格选择要编辑的任务
+      setEditingTask(null)
+      setCreateModalOpen(true)
+    },
+  })
 
   const handleCreateClick = () => {
     setEditingTask(null)

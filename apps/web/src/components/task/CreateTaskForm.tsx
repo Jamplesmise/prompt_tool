@@ -23,7 +23,7 @@ import { usePrompts } from '@/hooks/usePrompts'
 import { useModels, useUnifiedModels } from '@/hooks/useModels'
 import { useDatasets } from '@/hooks/useDatasets'
 import { useEvaluators } from '@/hooks/useEvaluators'
-import { useCreateTask } from '@/hooks/useTasks'
+import { useCreateTask, useRunTask } from '@/hooks/useTasks'
 import type { UnifiedModel } from '@/services/models'
 import { EvaluatorRecommendHint } from '@/components/analysis/EvaluatorRecommend'
 import { extractPromptFeatures, extractDatasetFeaturesFromColumns, matchEvaluators } from '@/lib/recommendation'
@@ -109,6 +109,7 @@ export function CreateTaskForm() {
   }, [currentStep, refetchDatasets])
 
   const createTask = useCreateTask()
+  const runTask = useRunTask()
 
   // 选中的提示词 ID
   const [selectedPromptIds, setSelectedPromptIds] = useState<string[]>([])
@@ -389,6 +390,15 @@ export function CreateTaskForm() {
       console.log('Task input:', input)
 
       const result = await createTask.mutateAsync(input)
+
+      // 创建成功后自动启动任务
+      try {
+        await runTask.mutateAsync(result.id)
+      } catch (runErr) {
+        console.error('Auto run task error:', runErr)
+        // 即使启动失败也跳转到详情页，用户可以手动启动
+      }
+
       router.push(`/tasks/${result.id}`)
     } catch (err) {
       console.error('Submit error:', err)
@@ -676,9 +686,9 @@ export function CreateTaskForm() {
             <Button
               type="primary"
               onClick={handleSubmit}
-              loading={createTask.isPending}
+              loading={createTask.isPending || runTask.isPending}
             >
-              创建任务
+              {createTask.isPending ? '创建中...' : runTask.isPending ? '启动中...' : '创建并执行'}
             </Button>
           )}
         </Space>

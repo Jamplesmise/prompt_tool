@@ -2,7 +2,7 @@
  * Phase 10: 提示词分支服务
  */
 
-import type { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
 export type CreateBranchParams = {
@@ -239,7 +239,7 @@ export async function publishBranchVersion(
   promptId: string,
   branchId: string,
   content: string,
-  variables: Prisma.InputJsonValue,
+  variables: Prisma.InputJsonValue | null,
   changeLog: string | undefined,
   createdById: string
 ) {
@@ -270,7 +270,7 @@ export async function publishBranchVersion(
         branchId,
         version: newVersion,
         content,
-        variables,
+        variables: variables ?? Prisma.JsonNull,
         changeLog,
         createdById,
       },

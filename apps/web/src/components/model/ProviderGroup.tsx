@@ -28,7 +28,9 @@ type ModelInfo = {
   error?: string
   config?: {
     temperature?: number
-    maxTokens?: number
+    maxInputTokens?: number
+    maxOutputTokens?: number
+    maxTokens?: number  // 向后兼容
   }
   pricing?: ModelPricing
 }

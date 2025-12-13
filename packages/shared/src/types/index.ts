@@ -9,3 +9,6 @@ export * from './api'
 export * from './monitor'
 export * from './team'
 export * from './schema'
+
+// GOI (Guided Orchestration Intelligence) 类型
+export * from './goi'

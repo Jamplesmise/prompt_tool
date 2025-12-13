@@ -30,7 +30,7 @@ async function migratePromptBranches() {
 
   for (const prompt of prompts) {
     // 检查是否已有默认分支
-    const existingDefault = prompt.branches.find((b) => b.isDefault)
+    const existingDefault = prompt.branches.find((b: { isDefault: boolean }) => b.isDefault)
     if (existingDefault) {
       console.log(`跳过提示词 "${prompt.name}" (ID: ${prompt.id}) - 已有默认分支`)
       skippedCount++

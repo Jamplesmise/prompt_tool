@@ -16,7 +16,9 @@ type EditModelModalProps = {
     isActive: boolean
     config?: {
       temperature?: number
-      maxTokens?: number
+      maxInputTokens?: number
+      maxOutputTokens?: number
+      maxTokens?: number  // 向后兼容
     }
     pricing?: ModelPricing
   } | null
@@ -28,7 +30,8 @@ type FormValues = {
   modelId: string
   isActive: boolean
   temperature?: number
-  maxTokens?: number
+  maxInputTokens?: number
+  maxOutputTokens?: number
   currency?: 'USD' | 'CNY'
   inputPerMillion?: number
   outputPerMillion?: number
@@ -45,7 +48,8 @@ export function EditModelModal({ open, model, onClose }: EditModelModalProps) {
         modelId: model.modelId,
         isActive: model.isActive,
         temperature: model.config?.temperature,
-        maxTokens: model.config?.maxTokens,
+        maxInputTokens: model.config?.maxInputTokens,
+        maxOutputTokens: model.config?.maxOutputTokens ?? model.config?.maxTokens,
         currency: model.pricing?.currency || 'USD',
         inputPerMillion: model.pricing?.inputPerMillion,
         outputPerMillion: model.pricing?.outputPerMillion,
@@ -66,7 +70,8 @@ export function EditModelModal({ open, model, onClose }: EditModelModalProps) {
           isActive: values.isActive,
           config: {
             temperature: values.temperature,
-            maxTokens: values.maxTokens,
+            maxInputTokens: values.maxInputTokens,
+            maxOutputTokens: values.maxOutputTokens,
           },
           pricing: {
             inputPerMillion: values.inputPerMillion,
@@ -111,8 +116,12 @@ export function EditModelModal({ open, model, onClose }: EditModelModalProps) {
           <InputNumber min={0} max={2} step={0.1} style={{ width: '100%' }} placeholder="0.7" />
         </Form.Item>
 
-        <Form.Item name="maxTokens" label="默认 Max Tokens">
-          <InputNumber min={1} max={128000} style={{ width: '100%' }} placeholder="4096" />
+        <Form.Item name="maxInputTokens" label="最大输入上下文" tooltip="模型支持的最大输入 token 数">
+          <InputNumber min={1} max={2000000} style={{ width: '100%' }} placeholder="如：128000" />
+        </Form.Item>
+
+        <Form.Item name="maxOutputTokens" label="最大输出 Tokens" tooltip="模型单次回复的最大 token 数">
+          <InputNumber min={1} max={128000} style={{ width: '100%' }} placeholder="如：4096" />
         </Form.Item>
 
         <Divider orientation="left" plain>
