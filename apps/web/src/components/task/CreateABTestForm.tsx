@@ -24,7 +24,7 @@ import { usePrompts } from '@/hooks/usePrompts'
 import { useModels } from '@/hooks/useModels'
 import { useDatasets } from '@/hooks/useDatasets'
 import { useEvaluators } from '@/hooks/useEvaluators'
-import { useCreateABTest } from '@/hooks/useTasks'
+import { useCreateABTest, useRunTask } from '@/hooks/useTasks'
 import { SimpleModelSelector } from '@/components/common'
 import type { UnifiedModel } from '@/services/models'
 import type { CreateABTestInput } from '@/services/tasks'
@@ -72,6 +72,7 @@ export function CreateABTestForm() {
   }, [currentStep, refetchDatasets])
 
   const createABTest = useCreateABTest()
+  const runTask = useRunTask()
 
   // 转换为 UnifiedModel 格式
   const unifiedModels: UnifiedModel[] = useMemo(() => {
@@ -158,6 +159,15 @@ export function CreateABTestForm() {
       }
 
       const result = await createABTest.mutateAsync(input)
+
+      // 创建成功后自动启动任务
+      try {
+        await runTask.mutateAsync(result.id)
+      } catch (runErr) {
+        console.error('Auto run task error:', runErr)
+        // 即使启动失败也跳转到详情页，用户可以手动启动
+      }
+
       router.push(`/tasks/${result.id}`)
     } catch (err) {
       console.error('Submit error:', err)
@@ -484,9 +494,9 @@ export function CreateABTestForm() {
             <Button
               type="primary"
               onClick={handleSubmit}
-              loading={createABTest.isPending}
+              loading={createABTest.isPending || runTask.isPending}
             >
-              创建 A/B 测试
+              {createABTest.isPending ? '创建中...' : runTask.isPending ? '启动中...' : '创建并执行'}
             </Button>
           )}
         </Space>

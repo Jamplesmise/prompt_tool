@@ -172,7 +172,8 @@ function buildRequest(
   let body: Record<string, unknown>
 
   const modelConfig = model.config as Record<string, unknown>
-  const maxTokens = input.maxTokens ?? modelConfig.maxTokens ?? 2048
+  // 优先使用 maxOutputTokens，向后兼容 maxTokens
+  const maxTokens = input.maxTokens ?? modelConfig.maxOutputTokens ?? modelConfig.maxTokens ?? 2048
   const temperature = input.temperature ?? modelConfig.temperature ?? 0.7
 
   if (providerType === 'anthropic') {
@@ -289,7 +290,8 @@ async function invokeFastGPTModel(
 
   const url = `${ONEHUB_BASE_URL}/chat/completions`
   const modelConfig = model.config as Record<string, unknown>
-  const maxTokens = input.maxTokens ?? modelConfig.maxTokens ?? 2048
+  // 优先使用 maxOutputTokens，向后兼容 maxTokens
+  const maxTokens = input.maxTokens ?? modelConfig.maxOutputTokens ?? modelConfig.maxTokens ?? 2048
   const temperature = input.temperature ?? modelConfig.temperature ?? 0.7
 
   const headers: Record<string, string> = {

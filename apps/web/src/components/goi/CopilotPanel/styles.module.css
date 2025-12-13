@@ -1,0 +1,615 @@
+/* CopilotPanel 样式 */
+
+.floatButton {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+}
+
+.copilotDrawer :global(.ant-drawer-header) {
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+}
+
+.drawerTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.titleIcon {
+  margin-right: 8px;
+  color: var(--primary-color, #1677ff);
+}
+
+.titleActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.panelContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.divider {
+  margin: 12px 0;
+}
+
+.bottomSection {
+  margin-top: auto;
+}
+
+.disconnectedBanner {
+  padding: 8px 12px;
+  background: #fff2e8;
+  color: #fa541c;
+  font-size: 12px;
+  text-align: center;
+  border-radius: 4px;
+  margin-top: 12px;
+}
+
+/* 当前理解区域 */
+.understandingCard {
+  margin-bottom: 0;
+}
+
+.understandingCard :global(.ant-card-head) {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.understandingCard :global(.ant-card-head-title) {
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.understandingCard :global(.ant-card-body) {
+  padding: 12px;
+}
+
+.understandingSummary {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-color, rgba(0, 0, 0, 0.88));
+}
+
+.selectedResources {
+  margin-top: 12px;
+}
+
+.selectedLabel {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* TODO 列表区域 */
+.todoCard {
+  margin-bottom: 0;
+}
+
+.todoCard :global(.ant-card-head) {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.todoCard :global(.ant-card-body) {
+  padding: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.todoProgress {
+  margin-bottom: 12px;
+}
+
+.todoList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.todoItem {
+  display: flex;
+  align-items: flex-start;
+  padding: 6px 0;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.todoItemIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.todoItemTitle {
+  flex: 1;
+  word-break: break-word;
+}
+
+.todoItemTitle.completed {
+  text-decoration: line-through;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+/* TODO 分组展示 */
+.todoHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.todoGroupList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.todoGroup {
+  margin-bottom: 8px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  background: #fafafa;
+  transition: background 0.2s;
+}
+
+.groupHeader:hover {
+  background: #f0f0f0;
+}
+
+.groupEmoji {
+  font-size: 14px;
+}
+
+.groupName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color, rgba(0, 0, 0, 0.88));
+}
+
+.groupCount {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.collapseIcon {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+.groupItems {
+  margin-left: 16px;
+  border-left: 2px solid #e8e8e8;
+  padding-left: 12px;
+  margin-top: 4px;
+}
+
+.todoItemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.todoValueLabel {
+  color: #1677ff;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.todoHint {
+  font-size: 11px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.keyBadge {
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 4px;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+/* 状态样式 */
+.status_in_progress {
+  background: #e6f4ff;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+}
+
+.status_failed {
+  background: #fff2f0;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: -6px -8px;
+}
+
+/* 检查点区域 */
+.checkpointCard {
+  margin-bottom: 0;
+  border: 1px solid #faad14;
+  background: #fffbe6;
+}
+
+.checkpointCard :global(.ant-card-head) {
+  background: #fffbe6;
+  border-bottom: 1px solid #faad14;
+}
+
+.checkpointTitle {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.checkpointReason {
+  font-size: 13px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.65));
+  margin-bottom: 12px;
+}
+
+.checkpointActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkpointTip {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+}
+
+/* 检查点选项卡片 */
+.checkpointOptionsCard {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+/* AI 推荐选择 */
+.checkpointAiChoice {
+  padding: 8px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.checkpointAiChoice :global(.ant-radio-wrapper) {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* AI 选择原因 */
+.checkpointAiReason {
+  margin-top: 8px;
+  margin-left: 24px;
+  padding: 6px 10px;
+  background: #fffbe6;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* 候选选项 */
+.checkpointAlternative {
+  padding: 6px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  transition: background 0.2s;
+}
+
+.checkpointAlternative:hover {
+  background: #f5f5f5;
+}
+
+.checkpointAlternative :global(.ant-radio-wrapper) {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* 检查点规则配置卡片 */
+.checkpointRulesCard {
+  margin-bottom: 0;
+}
+
+.checkpointRulesCard :global(.ant-card-head) {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.checkpointRulesCard :global(.ant-card-head-title) {
+  padding: 8px 0;
+  font-size: 13px;
+}
+
+.checkpointRulesCard :global(.ant-card-body) {
+  padding: 12px;
+}
+
+.checkpointRulesCard :global(.ant-list-item) {
+  padding: 8px 0 !important;
+}
+
+.checkpointRulesCard :global(.ant-list-item-meta-title) {
+  margin-bottom: 0 !important;
+}
+
+.checkpointRulesCard :global(.ant-slider-mark-text) {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* 上下文指示器 */
+.contextIndicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contextLabel {
+  font-size: 12px;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+  flex-shrink: 0;
+}
+
+.contextProgress {
+  flex: 1;
+}
+
+/* 命令输入 */
+.commandInput {
+  margin-bottom: 12px;
+}
+
+/* 模式选择器 */
+.modeSelector {
+  display: flex;
+  justify-content: center;
+}
+
+.modeRadio :global(.ant-radio-button-wrapper) {
+  font-size: 12px;
+}
+
+/* 空状态 */
+.emptyState {
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-secondary, rgba(0, 0, 0, 0.45));
+  font-size: 13px;
+}
+
+/* 加载状态 */
+.loadingState {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+/* ============================================ */
+/* 悬浮窗口样式 */
+/* ============================================ */
+
+.floatingWindow {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08),
+              0 3px 6px -4px rgba(0, 0, 0, 0.12),
+              0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  user-select: none;
+}
+
+.windowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #f8f9fa 0%, #f0f2f5 100%);
+  border-bottom: 1px solid #e8e8e8;
+  cursor: grab;
+}
+
+.windowHeader:active {
+  cursor: grabbing;
+}
+
+.windowTitle {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.windowIcon {
+  margin-right: 8px;
+  color: #1890ff;
+  font-size: 16px;
+}
+
+.windowControls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.windowButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+
+.windowButton:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.windowContent {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px;
+}
+
+.windowFooter {
+  padding: 12px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.windowStatusBar {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: #f5f5f5;
+  border-top: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 调整大小的边框 */
+.resizeHandle {
+  position: absolute;
+  z-index: 10;
+}
+
+.resizeN {
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: n-resize;
+}
+
+.resizeS {
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: s-resize;
+}
+
+.resizeE {
+  right: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  cursor: e-resize;
+}
+
+.resizeW {
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 4px;
+  cursor: w-resize;
+}
+
+.resizeNE {
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: ne-resize;
+}
+
+.resizeNW {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nw-resize;
+}
+
+.resizeSE {
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  cursor: se-resize;
+}
+
+.resizeSW {
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: sw-resize;
+}
+
+/* ============================================ */
+/* 模型配置样式 */
+/* ============================================ */
+
+.modelConfigCollapse {
+  background: transparent;
+}
+
+.modelConfigCollapse :global(.ant-collapse-header) {
+  padding: 8px 0 !important;
+}
+
+.modelConfigCollapse :global(.ant-collapse-content-box) {
+  padding: 0 !important;
+}
+
+.modelConfigContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modelConfigItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modelConfigLabel {
+  margin-bottom: 4px;
+}
+
+/* ============================================ */
+/* 连接状态样式 */
+/* ============================================ */
+
+.statusConnected {
+  color: #52c41a;
+}
+
+.statusDisconnected {
+  color: #faad14;
+}
+
+.statusError {
+  color: #ff4d4f;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .floatButton {
+    right: 16px;
+    bottom: 16px;
+  }
+}

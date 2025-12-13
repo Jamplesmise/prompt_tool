@@ -12,12 +12,32 @@ AI 模型测试平台 - 面向 AI 开发团队的提示词测试与模型评估�
 
 | 层级 | 技术 |
 |------|------|
-| 前端 | Next.js 14 + React 18 + TypeScript + Ant Design 5.x + ProComponents |
-| 后端 | Next.js API Routes + Prisma + BullMQ |
+| 前端 | Next.js 15 + React 19 + TypeScript + Ant Design 5.x + ProComponents |
+| 后端 | Next.js API Routes + Prisma 6 + BullMQ |
 | 数据库 | PostgreSQL 15 + Redis 7 |
 | 状态管理 | Zustand + React Query |
+| 测试 | Vitest + Playwright（E2E） |
 | 国际化 | 自研 i18n（中英文切换） |
 | 进程通信 | Redis Pub/Sub（跨进程事件推送） |
+
+### Next.js 15 / React 19 注意事项
+
+1. **动态路由参数异步化**：`params` 和 `searchParams` 现在是 Promise
+   - API 路由：`const { id } = await params`
+   - 客户端组件：`const { id } = use(params)` (需导入 `use` from 'react')
+
+2. **useRef 需要初始值**：
+   ```typescript
+   // React 19 要求
+   const ref = useRef<NodeJS.Timeout | undefined>(undefined)
+   // 而不是
+   const ref = useRef<NodeJS.Timeout>()
+   ```
+
+3. **Prisma 6 JSON 类型变更**：
+   - 写入数据库使用 `Prisma.InputJsonValue`
+   - 读取数据库返回 `Prisma.JsonValue`
+   - null 值使用 `Prisma.JsonNull`
 
 ## 项目结构
 
@@ -39,9 +59,14 @@ pnpm build          # 构建
 pnpm db:push        # 同步数据库
 pnpm db:seed        # 初始化数据
 pnpm lint           # 代码检查
-pnpm test           # 运行单元测试
-pnpm test:e2e       # 运行 E2E 测试（需先启动服务）
+pnpm test           # 运行单元测试（Vitest）
+pnpm test:e2e       # 运行 E2E 测试（Playwright，需先启动服务）
 ```
+
+### 测试框架
+
+- **单元测试**：使用 [Vitest](https://vitest.dev/)，测试文件放在 `__tests__/` 目录或使用 `.test.ts` 后缀
+- **E2E 测试**：使用 [Playwright](https://playwright.dev/)，测试文件在 `e2e/` 目录
 
 ## AI 助手操作规范
 
@@ -141,6 +166,9 @@ chore: 杂项
 | `docs/10-troubleshooting.md` | 问题排查与修复记录 |
 | `docs/11-design-system.md` | 设计系统规范、组件库、样式指南 |
 | `docs/12-structured-evaluation-upgrade-plan-v2.md` | 结构化评估能力升级详细方案 |
+| `docs/goi-intelligence-roadmap.md` | GOI 智能等级路线图（L0-L5） |
+| `docs/goi-best-practices.md` | GOI 开发与集成最佳实践 |
+| `docs/goi-transformation-plan.md` | GOI 总体转型方案 |
 
 ## 分阶段开发文档
 
@@ -192,6 +220,7 @@ chore: 杂项
 | 计划 | 目录 | 内容 | 状态 |
 |------|------|------|------|
 | 结构化评估升级 | `docs/structured-evaluation-plan/` | 基础结构化能力、AI配置助手、体验优化（3阶段） | ✅ 代码完成 |
+| GOI L2 升级 | `docs/goi-l2-upgrade/` | 多步骤规划、检查点确认、暂停续跑、接管交还、操作感知（6阶段） | ✅ 已完成 |
 | UI 设计系统 | `docs/design-system/` | 基础主题、核心组件、页面重构、交互增强、打磨优化（5阶段） | |
 | UI 功能开发 | `docs/design-ui-plan/` | 仪表盘、任务列表、提示词管理、数据集上传、模型配置、评估器、监控、全局搜索、设置（9模块） | |
 | 系统集成 | `docs/integration-plan/` | 基础设施、成员分组、组织管理、权限系统、FastGPT API、测试验证（6阶段） | |
@@ -260,6 +289,15 @@ chore: 杂项
 - Schema 模板库 + 从输出推断
 - 字段级统计分析 + 回归检测
 - 结果导出增强（多 Sheet Excel）
+
+**GOI L2 智能操作**：✅ 已完成
+- GOI Copilot 面板（三种协作模式：手动/辅助/自动）
+- 多步骤任务规划（自然语言 → TODO List）
+- 操作可视化（TODO List 实时状态）
+- 检查点机制（资源选择/参数确认/操作确认）
+- 暂停续跑（模式切换保持状态）
+- 接管交还（用户随时接管控制权）
+- 操作感知（追踪用户操作，协调计划状态）
 
 ## 快速开始新功能
 

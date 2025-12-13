@@ -150,8 +150,9 @@ describe('组合评估器测试', () => {
       ]
       const result = aggregate(results, 'and')
 
-      expect(result.details?.individualResults).toHaveLength(2)
-      expect(result.details?.individualResults[0].reason).toBe('评估器A通过')
+      const individualResults = result.details?.individualResults as Array<{ reason: string }>
+      expect(individualResults).toHaveLength(2)
+      expect(individualResults[0].reason).toBe('评估器A通过')
     })
   })
 

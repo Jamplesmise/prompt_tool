@@ -16,7 +16,9 @@ export type Provider = {
 
 export type ModelConfig = {
   temperature?: number
-  maxTokens?: number
+  maxInputTokens?: number   // 最大输入上下文长度
+  maxOutputTokens?: number  // 最大输出 token 数
+  maxTokens?: number        // @deprecated 向后兼容，等同于 maxOutputTokens
   topP?: number
   frequencyPenalty?: number
   presencePenalty?: number

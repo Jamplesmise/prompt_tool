@@ -20,7 +20,9 @@ type ModelCardProps = {
   error?: string
   config?: {
     temperature?: number
-    maxTokens?: number
+    maxInputTokens?: number
+    maxOutputTokens?: number
+    maxTokens?: number  // 向后兼容
   }
   pricing?: ModelPricing
   onTest?: () => void
@@ -91,16 +93,21 @@ export function ModelCard({
         />
 
         {/* 默认参数 */}
-        {config && (config.temperature !== undefined || config.maxTokens !== undefined) && (
+        {config && (config.temperature !== undefined || config.maxInputTokens !== undefined || config.maxOutputTokens !== undefined || config.maxTokens !== undefined) && (
           <Space direction="vertical" size={2} style={{ width: '100%' }}>
             {config.temperature !== undefined && (
               <Text type="secondary" style={{ fontSize: 11 }}>
                 Temperature: {config.temperature}
               </Text>
             )}
-            {config.maxTokens !== undefined && (
+            {config.maxInputTokens !== undefined && (
               <Text type="secondary" style={{ fontSize: 11 }}>
-                Max Tokens: {config.maxTokens}
+                输入上下文: {config.maxInputTokens.toLocaleString()}
+              </Text>
+            )}
+            {(config.maxOutputTokens !== undefined || config.maxTokens !== undefined) && (
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                最大输出: {(config.maxOutputTokens ?? config.maxTokens)?.toLocaleString()}
               </Text>
             )}
           </Space>

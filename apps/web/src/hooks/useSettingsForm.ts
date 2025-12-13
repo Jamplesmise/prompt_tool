@@ -27,7 +27,7 @@ export function useSettingsForm<T extends Record<string, unknown>>(
   const [values, setValuesState] = useState<T>(initialValues)
   const [saveState, setSaveState] = useState<SaveButtonState>('idle')
   const [errorMessage, setErrorMessage] = useState<string>()
-  const timerRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   useEffect(() => {
     return () => {
