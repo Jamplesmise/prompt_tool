@@ -2,9 +2,14 @@
  * GOI 计划生成 Prompt
  *
  * 用于引导 LLM 将用户目标拆分为原子操作的 TODO List
+ *
+ * 支持两种模式：
+ * 1. 动态 Skill 加载（推荐）- 根据用户输入按需加载相关 Skill
+ * 2. 完整提示词（回退）- 使用静态的完整提示词
  */
 
 import type { TodoItemCategory } from '@platform/shared'
+import { routeToSkills, loadSkills, type SkillRouteResult } from '../skills'
 
 // ============================================
 // 类型定义
@@ -524,6 +529,84 @@ Checkpoint 决定是否需要用户确认。**必须严格按以下规则设置*
 \`\`\`
 `
 
+// ============================================
+// 动态 Skill 加载
+// ============================================
+
+/**
+ * 是否启用 Skill 模式
+ *
+ * 通过环境变量控制，默认启用
+ */
+export function isSkillModeEnabled(): boolean {
+  return process.env.GOI_USE_SKILLS !== 'false'
+}
+
+/**
+ * 动态构建计划提示词
+ *
+ * 根据用户输入匹配相关 Skill，按需加载
+ *
+ * @param goal 用户目标
+ * @returns 动态组装的系统提示词和路由结果
+ */
+export function buildDynamicPlanPrompt(goal: string): {
+  systemPrompt: string
+  routeResult: SkillRouteResult
+} {
+  // 路由到相关 Skill
+  const routeResult = routeToSkills(goal)
+
+  // 加载 Skill 内容
+  const skillContent = loadSkills(routeResult.skills)
+
+  return {
+    systemPrompt: skillContent,
+    routeResult,
+  }
+}
+
+/**
+ * 构建计划系统提示词
+ *
+ * 优先使用动态 Skill 加载，失败时回退到完整提示词
+ *
+ * @param goal 用户目标（用于 Skill 路由）
+ * @returns 系统提示词
+ */
+export function buildPlanPrompt(goal: string): string {
+  // 检查是否启用 Skill 模式
+  if (!isSkillModeEnabled()) {
+    console.log('[PlanPrompt] Skill mode disabled, using full prompt')
+    return PLAN_SYSTEM_PROMPT
+  }
+
+  try {
+    const { systemPrompt, routeResult } = buildDynamicPlanPrompt(goal)
+
+    console.log(
+      `[PlanPrompt] Loaded skills: ${routeResult.skills.join(', ')} ` +
+        `(confidence: ${routeResult.confidence.toFixed(2)})`
+    )
+
+    return systemPrompt
+  } catch (error) {
+    console.warn('[PlanPrompt] Failed to load skills, falling back to full prompt:', error)
+    return PLAN_SYSTEM_PROMPT
+  }
+}
+
+/**
+ * 获取完整的系统提示词（用于调试或回退）
+ */
+export function getFullPlanPrompt(): string {
+  return PLAN_SYSTEM_PROMPT
+}
+
+// ============================================
+// User Prompt 构建
+// ============================================
+
 /**
  * 构建用户 Prompt
  */
@@ -577,8 +660,26 @@ ${goal}
 
 /**
  * 构建完整的消息列表
+ *
+ * 使用动态 Skill 加载构建系统提示词
  */
 export function buildPlanMessages(
+  goal: string,
+  context?: PlanContext
+): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+  // 使用动态 Skill 加载（会自动回退到完整提示词）
+  const systemPrompt = buildPlanPrompt(goal)
+
+  return [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: buildPlanUserPrompt(goal, context) },
+  ]
+}
+
+/**
+ * 使用完整提示词构建消息列表（用于回退或调试）
+ */
+export function buildFullPlanMessages(
   goal: string,
   context?: PlanContext
 ): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {

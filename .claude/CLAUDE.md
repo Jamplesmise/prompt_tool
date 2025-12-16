@@ -222,6 +222,7 @@ chore: 杂项
 | 结构化评估升级 | `docs/structured-evaluation-plan/` | 基础结构化能力、AI配置助手、体验优化（3阶段） | ✅ 代码完成 |
 | GOI L2 升级 | `docs/goi-l2-upgrade/` | 多步骤规划、检查点确认、暂停续跑、接管交还、操作感知（6阶段） | ✅ 已完成 |
 | GOI Demo 增强 | `docs/goi-demo-enhancement/` | Handler 层实现 + 前端集成补全 + 端到端演示（含 DESIGN.md 技术设计、TASKS.md Handler 任务、FRONTEND-INTEGRATION-PLAN.md 前端任务） | ✅ v3.1.0 可演示 |
+| GOI Skill 优化 | `docs/goi-skill-optimization/` | 参考 Claude Code Skill 机制优化提示词架构，按需加载、模块化、提升性能（5阶段） | 📋 规划完成 |
 | UI 设计系统 | `docs/design-system/` | 基础主题、核心组件、页面重构、交互增强、打磨优化（5阶段） | |
 | UI 功能开发 | `docs/design-ui-plan/` | 仪表盘、任务列表、提示词管理、数据集上传、模型配置、评估器、监控、全局搜索、设置（9模块） | |
 | 系统集成 | `docs/integration-plan/` | 基础设施、成员分组、组织管理、权限系统、FastGPT API、测试验证（6阶段） | |

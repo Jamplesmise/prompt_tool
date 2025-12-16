@@ -219,6 +219,46 @@ export function parseVerifyResponse(response: string): VerifyResult {
 // ============================================
 
 /**
+ * 页面路由映射：多资源类型共用页面
+ */
+const SHARED_PAGE_MAP: Record<string, string[]> = {
+  '/models': ['provider', 'model'],
+  '/monitor/alerts': ['alert_rule', 'notify_channel'],
+  '/schemas': ['input_schema', 'output_schema'],
+}
+
+/**
+ * 检查导航路径是否匹配资源类型
+ */
+function isValidNavigationPath(resourceType: string, path: string): boolean {
+  // 直接匹配
+  if (path.includes(resourceType)) return true
+
+  // 检查共用页面
+  for (const [pagePath, types] of Object.entries(SHARED_PAGE_MAP)) {
+    if (path.includes(pagePath) && types.includes(resourceType)) {
+      return true
+    }
+  }
+
+  // 资源类型到页面路径的映射
+  const resourcePathMap: Record<string, string> = {
+    prompt: '/prompts',
+    prompt_version: '/prompts',
+    prompt_branch: '/prompts',
+    dataset: '/datasets',
+    dataset_version: '/datasets',
+    task: '/tasks',
+    task_result: '/tasks',
+    evaluator: '/evaluators',
+    scheduled_task: '/scheduled',
+  }
+
+  const expectedPath = resourcePathMap[resourceType]
+  return expectedPath ? path.includes(expectedPath) : false
+}
+
+/**
  * 基于规则的简单验证
  * 对于简单场景，不需要调用 LLM
  */
@@ -252,54 +292,217 @@ export function ruleBasedVerify(
     }
   }
 
-  // 根据操作类型进行简单验证
+  // 根据操作类型进行验证
   const operation = todoItem.goiOperation as GoiOperation
   switch (operation.type) {
     case 'access':
-      // 访问操作：检查是否返回了 URL
-      if ('url' in result && typeof result.url === 'string') {
-        return {
-          success: true,
-          method: 'rule',
-          reason: '访问操作成功，已获取目标 URL',
-          confidence: 0.9,
-          needsHumanReview: false,
-          suggestedAction: 'continue',
-        }
-      }
-      break
+      return verifyAccessOperation(operation, result)
 
     case 'state':
-      // 状态操作：检查是否返回了资源 ID
+      return verifyStateOperation(operation, result)
+
+    case 'observation':
+      return verifyObservationOperation(operation, result)
+  }
+
+  // 无法通过规则判断，返回 null 表示需要 LLM 验证
+  return null
+}
+
+/**
+ * 验证 Access 操作
+ */
+function verifyAccessOperation(
+  operation: GoiOperation,
+  result: Record<string, unknown>
+): VerifyResult | null {
+  const accessOp = operation as {
+    type: 'access'
+    target?: { resourceType?: string }
+    action?: string
+  }
+
+  // 检查是否返回了 URL 或导航成功标志
+  if ('url' in result || 'navigatedTo' in result || 'success' in result) {
+    const url = (result.url || result.navigatedTo) as string | undefined
+    const resourceType = accessOp.target?.resourceType
+
+    // 如果有 URL 和资源类型，验证路径是否匹配
+    if (url && resourceType) {
+      const isValid = isValidNavigationPath(resourceType, url)
+      if (!isValid) {
+        return {
+          success: false,
+          method: 'rule',
+          reason: `导航路径 "${url}" 与资源类型 "${resourceType}" 不匹配`,
+          confidence: 0.9,
+          needsHumanReview: true,
+          suggestedAction: 'retry',
+        }
+      }
+    }
+
+    // 根据 action 类型返回不同的消息
+    const actionMessages: Record<string, string> = {
+      navigate: '导航成功',
+      view: '查看操作成功',
+      create: '已打开创建弹窗',
+      edit: '已打开编辑弹窗',
+      select: '已打开选择器',
+      test: '已打开测试弹窗',
+    }
+
+    return {
+      success: true,
+      method: 'rule',
+      reason: actionMessages[accessOp.action || 'navigate'] || '访问操作成功',
+      confidence: 0.95,
+      needsHumanReview: false,
+      suggestedAction: 'continue',
+    }
+  }
+
+  // 弹窗操作可能只返回 dialogOpened
+  if ('dialogOpened' in result && result.dialogOpened === true) {
+    return {
+      success: true,
+      method: 'rule',
+      reason: '弹窗已打开',
+      confidence: 0.95,
+      needsHumanReview: false,
+      suggestedAction: 'continue',
+    }
+  }
+
+  return null
+}
+
+/**
+ * 验证 State 操作
+ */
+function verifyStateOperation(
+  operation: GoiOperation,
+  result: Record<string, unknown>
+): VerifyResult | null {
+  const stateOp = operation as {
+    type: 'state'
+    action?: string
+    target?: { resourceType?: string }
+    expectedState?: Record<string, unknown>
+  }
+  const action = stateOp.action
+
+  switch (action) {
+    case 'create':
+      // 创建操作：必须返回新资源 ID
       if ('id' in result || 'resourceId' in result) {
-        const action = (operation as { action?: string }).action
+        const resourceId = (result.id || result.resourceId) as string
         return {
           success: true,
           method: 'rule',
-          reason: `${action} 操作成功`,
-          confidence: 0.85,
-          needsHumanReview: action === 'delete', // 删除操作需要人工确认
+          reason: `创建成功，资源 ID: ${resourceId}`,
+          confidence: 0.95,
+          needsHumanReview: false,
+          suggestedAction: 'continue',
+          details: { resourceId },
+        }
+      }
+      break
+
+    case 'update':
+      // 更新操作：返回 ID 或 success
+      if ('id' in result || 'resourceId' in result || result.success === true) {
+        return {
+          success: true,
+          method: 'rule',
+          reason: '更新成功',
+          confidence: 0.9,
+          needsHumanReview: false,
           suggestedAction: 'continue',
         }
       }
       break
 
-    case 'observation':
-      // 查询操作：检查是否返回了数据
-      if ('data' in result || Array.isArray(result)) {
+    case 'delete':
+      // 删除操作：返回 success 或 deleted
+      if (result.success === true || 'deleted' in result) {
         return {
           success: true,
           method: 'rule',
-          reason: '查询操作成功，已获取数据',
+          reason: '删除成功',
           confidence: 0.9,
-          needsHumanReview: false,
+          needsHumanReview: true, // 删除操作需要人工确认
           suggestedAction: 'continue',
         }
       }
       break
   }
 
-  // 无法通过规则判断，返回 null 表示需要 LLM 验证
+  // 通用：如果有 id/resourceId 字段，视为成功
+  if ('id' in result || 'resourceId' in result) {
+    return {
+      success: true,
+      method: 'rule',
+      reason: `${action} 操作成功`,
+      confidence: 0.85,
+      needsHumanReview: action === 'delete',
+      suggestedAction: 'continue',
+    }
+  }
+
+  return null
+}
+
+/**
+ * 验证 Observation 操作
+ */
+function verifyObservationOperation(
+  operation: GoiOperation,
+  result: Record<string, unknown>
+): VerifyResult | null {
+  // 检查是否返回了数据
+  const hasData = 'data' in result || 'results' in result || Array.isArray(result)
+
+  if (hasData) {
+    const data = (result.data || result.results || result) as unknown[]
+    const count = Array.isArray(data) ? data.length : 1
+
+    // 空结果也是有效的查询结果
+    if (Array.isArray(data) && data.length === 0) {
+      return {
+        success: true,
+        method: 'rule',
+        reason: '查询成功，未找到匹配记录',
+        confidence: 0.95,
+        needsHumanReview: false,
+        suggestedAction: 'continue',
+        details: { count: 0 },
+      }
+    }
+
+    return {
+      success: true,
+      method: 'rule',
+      reason: `查询成功，找到 ${count} 条记录`,
+      confidence: 0.95,
+      needsHumanReview: false,
+      suggestedAction: 'continue',
+      details: { count },
+    }
+  }
+
+  // 单个资源查询
+  if ('id' in result && 'name' in result) {
+    return {
+      success: true,
+      method: 'rule',
+      reason: '资源查询成功',
+      confidence: 0.95,
+      needsHumanReview: false,
+      suggestedAction: 'continue',
+    }
+  }
+
   return null
 }
 
