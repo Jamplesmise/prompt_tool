@@ -3,6 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Editor, { OnMount, BeforeMount, loader } from '@monaco-editor/react'
 import { Select, InputNumber, Button, Tooltip, Dropdown, type MenuProps } from 'antd'
+
+// 配置 Monaco 使用本地文件而不是 CDN（解决云端环境 CDN 无法访问的问题）
+// 必须在客户端动态导入，因为 monaco-editor 依赖 window 对象
+if (typeof window !== 'undefined') {
+  import('monaco-editor').then((monaco) => {
+    loader.config({ monaco })
+  })
+}
 import {
   FileTextOutlined,
   ExpandOutlined,
