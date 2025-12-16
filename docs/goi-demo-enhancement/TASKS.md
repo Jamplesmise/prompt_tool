@@ -363,13 +363,44 @@ export type StateOperation = {
 
 ---
 
+### Day 3 - 2025-12-16
+
+**计划**：
+- [x] P5：端到端演示场景调试与修复
+
+**实际**：
+- ✅ 修复 Checkpoint 自动模式问题
+  - 更新 `agentLoop.ts` - `shouldAutoApprove()` 支持 auto 模式自动批准非删除操作
+  - 更新 `start/route.ts` - 接收并传递 mode 参数
+  - 更新 `useCopilot.ts` - 发送 mode 到后端
+- ✅ 添加枚举值规范化（`stateHandler.ts`）
+  - 自动将小写枚举值转为大写（如 `mock` → `CUSTOM`，`openai` → `OPENAI`）
+  - 支持 provider、evaluator、alert_rule、notify_channel 等资源类型
+- ✅ 添加字段白名单过滤（`stateHandler.ts`）
+  - 自动过滤 schema 中不存在的字段（如 Provider 没有 description）
+  - 防止 LLM 生成无效字段导致 Prisma 错误
+- ✅ 更新 `planPrompt.ts` - 添加明确的 Checkpoint 使用规则
+  - 删除操作必须确认
+  - 用户目标明确时直接创建（`state.create`）
+  - 用户目标模糊时打开弹窗（`access.create`）
+  - 添加枚举值约束表
+- ✅ 修复 Monaco Editor CDN 超时问题
+  - 添加 `monaco-editor` 依赖
+  - 配置 loader 使用本地文件而非 CDN
+  - 使用动态导入避免 SSR 错误
+
+**发布**：
+- v3.1.0 - GOI Demo Enhancement
+- v3.1.1 - Monaco Editor 本地化加载修复
+
+---
+
 ### 待完成
 
-**前端集成 P3-P5**：
-- [ ] P3：State-UI 联动
-- [ ] P4：资源 ID 模糊解析
-- [ ] P5：端到端演示场景
+**前端集成**：
+- [ ] P3：State-UI 联动（资源创建后自动刷新列表）
+- [ ] P4：资源 ID 模糊解析（根据名称查找资源）
 
 **Phase 5**：
 - [ ] 边界情况处理（API 超时、网络断开、用户取消）
-- [ ] 演示场景准备
+- [ ] 演示场景准备（录制演示视频）

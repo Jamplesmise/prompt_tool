@@ -6,6 +6,57 @@
 
 ---
 
+## [3.1.1] - 2024-12-16
+
+### 修复
+
+- **Monaco Editor 本地化加载**：解决云端环境 CDN 无法访问导致编辑器无限加载的问题
+  - 添加 `monaco-editor` 依赖，配置 loader 使用本地文件
+  - 使用动态导入避免 SSR `window undefined` 错误
+
+---
+
+## [3.1.0] - 2024-12-16
+
+### GOI Demo Enhancement
+
+GOI 系统端到端演示增强，实现完整的自动化操作流程。
+
+#### 新功能
+
+- **State Handler 增强**
+  - 枚举值自动规范化（如 `mock` → `CUSTOM`，`openai` → `OPENAI`）
+  - 字段白名单过滤（自动移除 schema 中不存在的字段）
+  - 支持所有资源类型的 CRUD 操作
+
+- **Access Handler 增强**
+  - 弹窗打开事件（`goi:openDialog`）
+  - 表单预填事件（`goi:prefillForm`）
+  - 资源变更事件（`goi:resourceChange`）
+
+- **Checkpoint 系统增强**
+  - 明确的 checkpoint 规则（自动模式下非删除操作自动批准）
+  - 目标明确时直接创建，目标模糊时打开弹窗
+
+- **多页面 GOI 集成**
+  - 提示词管理页面
+  - 数据集管理页面
+  - 评估器管理页面
+  - 任务管理页面
+  - Schema 管理页面
+
+- **变量解析器**
+  - 支持步骤间依赖（如 `$1.result.resourceId`）
+  - 支持数组索引和嵌套路径
+
+#### 文档
+
+- `docs/goi-demo-enhancement/DESIGN.md` - 技术设计文档
+- `docs/goi-demo-enhancement/TASKS.md` - Handler 层任务清单
+- `docs/goi-demo-enhancement/FRONTEND-INTEGRATION-PLAN.md` - 前端集成计划
+
+---
+
 ## [3.0.0] - 2024-12-13
 
 ### 🚀 主版本升级
