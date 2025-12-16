@@ -6,10 +6,31 @@
 
 import type { TodoItem, TodoList } from '@platform/shared'
 import { prisma } from '../../prisma'
+import {
+  extractResourceReferences,
+  resolveAllResourceReferences,
+  replaceResourceReferences,
+  type ResourceCandidate,
+  type ResourceHint,
+} from './resourceResolver'
 
 // ============================================
 // 类型定义
 // ============================================
+
+/**
+ * 待确认的资源选择
+ */
+export type PendingResourceSelection = {
+  /** 原始引用字符串（如 "$prompt:情感分析"） */
+  reference: string
+  /** 资源类型 */
+  resourceType: string
+  /** 用户描述 */
+  hint: string
+  /** 候选资源列表 */
+  candidates: ResourceCandidate[]
+}
 
 /**
  * 收集的上下文信息
@@ -40,6 +61,20 @@ export type GatheredContext = {
 
   /** 依赖项结果 */
   dependencyResults: Record<string, unknown>
+
+  /** 已解析的资源引用（引用字符串 -> 资源ID） */
+  resolvedResources: Record<string, string>
+
+  /** 待确认的资源选择（需要用户选择） */
+  pendingResourceSelections: PendingResourceSelection[]
+
+  /** 解析失败的资源引用 */
+  failedResourceResolutions: Array<{
+    reference: string
+    resourceType: string
+    hint: string
+    error: string
+  }>
 
   /** Token 估算 */
   tokenEstimate: number
@@ -116,6 +151,9 @@ export class Gatherer {
       completedItems: [],
       relatedResources: [],
       dependencyResults: {},
+      resolvedResources: {},
+      pendingResourceSelections: [],
+      failedResourceResolutions: [],
       tokenEstimate: 0,
       gatheredAt: new Date(),
     }
@@ -132,10 +170,13 @@ export class Gatherer {
     // 4. 收集相关资源
     await this.gatherRelatedResources(context, todoItem)
 
-    // 5. 压缩上下文（如果超过限制）
+    // 5. 解析资源引用（如 $prompt:情感分析）
+    await this.resolveResourceReferences(context, todoItem)
+
+    // 6. 压缩上下文（如果超过限制）
     this.compressContext(context)
 
-    // 6. 计算 Token 估算
+    // 7. 计算 Token 估算
     context.tokenEstimate = estimateObjectTokens(context)
 
     return context
@@ -359,6 +400,73 @@ export class Gatherer {
     } catch (error) {
       console.warn(`[Gatherer] Failed to fetch ${resourceType}/${resourceId}:`, error)
       return null
+    }
+  }
+
+  /**
+   * 解析 TODO Item 中的资源引用
+   *
+   * 处理如 "$prompt:情感分析" 这样的引用，解析为实际的资源 ID。
+   * 如果有多个匹配，需要用户确认选择。
+   */
+  private async resolveResourceReferences(
+    context: GatheredContext,
+    todoItem: TodoItem
+  ): Promise<void> {
+    const operation = todoItem.goiOperation
+    if (!operation) return
+
+    try {
+      // 检查操作中是否包含资源引用
+      const references = extractResourceReferences(operation)
+      if (references.length === 0) {
+        return
+      }
+
+      console.log('[Gatherer] Found resource references:', references)
+
+      // 解析所有资源引用
+      const resolutionResult = await resolveAllResourceReferences(operation)
+
+      // 记录已解析的引用
+      context.resolvedResources = resolutionResult.resolved
+
+      // 记录需要确认的引用
+      context.pendingResourceSelections = resolutionResult.needsConfirmation.map((nc) => ({
+        reference: nc.reference,
+        resourceType: nc.resourceType,
+        hint: nc.hint,
+        candidates: nc.candidates,
+      }))
+
+      // 记录解析失败的引用
+      context.failedResourceResolutions = resolutionResult.failed
+
+      // 如果有解析成功的引用，替换操作中的引用为实际 ID
+      if (Object.keys(resolutionResult.resolved).length > 0) {
+        const resolvedOperation = replaceResourceReferences(
+          operation,
+          resolutionResult.resolved
+        )
+        // 更新 todoItem 的 goiOperation（注意：这会修改原始对象）
+        Object.assign(todoItem.goiOperation!, resolvedOperation)
+      }
+
+      // 日志输出
+      if (context.pendingResourceSelections.length > 0) {
+        console.log(
+          '[Gatherer] Resource references need confirmation:',
+          context.pendingResourceSelections.map((p) => p.reference)
+        )
+      }
+      if (context.failedResourceResolutions.length > 0) {
+        console.warn(
+          '[Gatherer] Failed to resolve resources:',
+          context.failedResourceResolutions.map((f) => `${f.reference}: ${f.error}`)
+        )
+      }
+    } catch (error) {
+      console.error('[Gatherer] Failed to resolve resource references:', error)
     }
   }
 

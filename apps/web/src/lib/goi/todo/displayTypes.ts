@@ -59,6 +59,12 @@ export type DisplayTodoItem = {
   requiresConfirm: boolean
   /** 预计耗时（秒） */
   estimatedSeconds: number
+  /** 操作类别（用于结果展示） */
+  category?: 'access' | 'state' | 'observation'
+  /** 执行结果（用于展示摘要） */
+  result?: unknown
+  /** 错误信息 */
+  error?: string
   /** 原始数据（调试用） */
   _raw?: {
     operation: GoiOperation

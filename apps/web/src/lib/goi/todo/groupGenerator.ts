@@ -127,6 +127,9 @@ function convertTodoItem(item: TodoItem, index: number): DisplayTodoItem {
     replanned: '↻',
   }
 
+  // 提取操作类别（用于结果展示）
+  const category = item.goiOperation.type as 'access' | 'state' | 'observation'
+
   return {
     id: item.id,
     userLabel: labels.userLabel,
@@ -139,6 +142,9 @@ function convertTodoItem(item: TodoItem, index: number): DisplayTodoItem {
     estimatedSeconds: item.estimatedDuration
       ? Math.ceil(item.estimatedDuration / 1000)
       : estimateOperationTime(item.goiOperation),
+    category,
+    result: item.result,
+    error: item.error,
     _raw: {
       operation: item.goiOperation,
       technicalLabel: labels.technicalLabel,

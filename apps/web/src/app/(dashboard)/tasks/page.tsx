@@ -8,6 +8,9 @@ import { useRunTask, useStopTask, useRetryTask, usePauseTask, useResumeTask } fr
 import { TaskCard, TaskFilters, TaskEmptyState } from '@/components/task'
 import type { TaskFiltersValue } from '@/components/task'
 import { ErrorState } from '@/components/common'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { useGoiResourceListener } from '@/hooks/useGoiResourceListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -35,6 +38,15 @@ export default function TasksPage() {
   const retryTask = useRetryTask()
   const pauseTask = usePauseTask()
   const resumeTask = useResumeTask()
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_TASK]: () => router.push('/tasks/new'),
+    [GOI_DIALOG_IDS.CREATE_AB_TASK]: () => router.push('/tasks/new-ab'),
+  })
+
+  // GOI 资源变更监听 - 自动刷新列表
+  useGoiResourceListener('task')
 
   // 错误状态
   if (error) {

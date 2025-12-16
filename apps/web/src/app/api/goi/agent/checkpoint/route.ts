@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // 解析请求体
     const body = await request.json()
-    const { sessionId, itemId, action, feedback, reason } = body
+    const { sessionId, itemId, action, feedback, reason, selectedResourceId } = body
 
     // 验证必填字段
     if (!sessionId) {
@@ -54,19 +54,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 检查状态
+    // 检查状态 - 允许 waiting 或 idle 状态处理检查点
+    // idle 状态也需要处理，因为用户可能在表单页面手动完成操作
     const currentStatus = agentLoop.getStatus()
-    if (currentStatus.status !== 'waiting') {
+    const todoList = agentLoop.getTodoList()
+    const targetItem = todoList?.items.find(i => i.id === itemId)
+
+    // 如果目标项不是 waiting 状态，拒绝处理
+    if (!targetItem) {
       return NextResponse.json({
         code: 400004,
-        message: `无法处理检查点：当前状态为 ${currentStatus.status}`,
+        message: '找不到指定的 TODO 项',
         data: { status: currentStatus },
+      }, { status: 400 })
+    }
+
+    if (targetItem.status !== 'waiting') {
+      return NextResponse.json({
+        code: 400004,
+        message: `无法处理检查点：TODO 项状态为 ${targetItem.status}`,
+        data: { status: currentStatus, itemStatus: targetItem.status },
       }, { status: 400 })
     }
 
     // 执行确认或拒绝
     if (action === 'approve') {
-      const stepResult = await agentLoop.approveCheckpoint(itemId, feedback)
+      const stepResult = await agentLoop.approveCheckpoint(itemId, feedback, selectedResourceId)
+
+      // 如果下一步也返回 waiting 状态，构建新的检查点信息
+      let pendingCheckpoint = null
+      if (stepResult.waiting && stepResult.currentItem) {
+        const item = stepResult.currentItem
+        if (item.checkpoint?.required) {
+          pendingCheckpoint = {
+            id: `checkpoint-${item.id}-${Date.now()}`,
+            todoItem: item,
+            reason: item.checkpoint.message || '需要用户确认',
+            options: (item.checkpoint as { options?: Array<{ id: string; label: string; description?: string }> }).options || [],
+            createdAt: new Date(),
+          }
+        }
+      }
 
       return NextResponse.json({
         code: 200,
@@ -74,6 +102,8 @@ export async function POST(request: NextRequest) {
         data: {
           ...stepResult,
           status: agentLoop.getStatus(),
+          todoList: agentLoop.getTodoList(), // 返回完整的 todoList
+          pendingCheckpoint, // 返回下一个检查点（如果有）
         },
       })
     } else {

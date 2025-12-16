@@ -44,10 +44,12 @@ export type TodoItemCategory =
  * 检查点类型
  */
 export type CheckpointType =
-  | 'review'       // 需要人工审查
-  | 'approval'     // 需要人工批准
-  | 'decision'     // 需要人工决策
-  | 'confirmation' // 需要人工确认
+  | 'review'              // 需要人工审查
+  | 'approval'            // 需要人工批准
+  | 'decision'            // 需要人工决策
+  | 'confirmation'        // 需要人工确认
+  | 'resource_selection'  // 资源选择（多个匹配时需要用户选择）
+  | 'resource_not_found'  // 资源未找到（需要用户创建或取消）
 
 /**
  * 检查点配置
@@ -267,6 +269,8 @@ export type UpdateTodoItemInput = {
   userFeedback?: string
   retryCount?: number
   metadata?: Record<string, unknown>
+  /** 检查点配置（可动态更新） */
+  checkpoint?: CheckpointConfig
 }
 
 /**

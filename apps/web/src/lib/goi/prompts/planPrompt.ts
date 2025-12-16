@@ -94,11 +94,16 @@ export const PLAN_SYSTEM_PROMPT = `你是一个 AI 测试平台的操作规划�
 
 **Access action 说明**：
 - \`navigate\`：导航到列表页
-- \`view\`：查看详情（需要 resourceId）
-- \`create\`：打开创建弹窗（不需要 resourceId）
-- \`edit\`：打开编辑弹窗（需要 resourceId）
+- \`view\`：查看详情。有 resourceId 时打开详情页，没有则导航到列表页让用户选择
+- \`create\`：打开创建弹窗/页面（不需要 resourceId）
+- \`edit\`：打开编辑弹窗/页面。有 resourceId 时打开编辑页，没有则导航到列表页让用户选择
 - \`select\`：打开选择器弹窗
-- \`test\`：打开测试弹窗（仅 model 支持，需要 resourceId）
+- \`test\`：打开测试弹窗（仅 model 和 notify_channel 支持，需要 resourceId）
+
+**关于 resourceId**：
+- 当用户说"帮我查看提示词"但没有指定具体哪个时，使用 view 操作但不提供 resourceId
+- 系统会自动导航到列表页，用户可以自行点击选择
+- 只有当用户明确指定了资源名称或 ID 时，才在 goiOperation 中提供 resourceId
 
 ### 2. State（状态变更）
 - 创建新资源
@@ -156,11 +161,28 @@ export const PLAN_SYSTEM_PROMPT = `你是一个 AI 测试平台的操作规划�
 ### provider vs model（重要区分）
 - **provider（模型供应商）**：API 连接配置（如 OpenAI、Azure、Anthropic）
   - 只能 create/edit/delete/view，**不能测试**
-  - 包含：name, type, baseUrl, apiKey
+  - 字段：name, type, baseUrl, apiKey, headers, isActive（**注意：没有 description 字段**）
+  - **type 枚举值**：\`OPENAI\`, \`ANTHROPIC\`, \`AZURE\`, \`CUSTOM\`（必须大写）
 - **model（模型）**：属于某个 provider 的具体模型（如 gpt-4、claude-3）
   - 可以 create/edit/delete/view/**test**（测试连通性）
-  - 包含：name, providerId, modelId, isActive
+  - 字段：name, providerId, modelId, description, isActive, maxTokens, temperature
 - 两者**共用 "/models" 页面**，但弹窗不同
+
+### 资源字段枚举约束
+
+创建资源时，以下字段必须使用指定的枚举值：
+
+| 资源类型 | 字段 | 枚举值 | 默认值 |
+|---------|------|--------|--------|
+| provider | type | \`OPENAI\`, \`ANTHROPIC\`, \`AZURE\`, \`CUSTOM\` | \`OPENAI\` |
+| evaluator | type | \`PRESET\`, \`CODE\`, \`LLM\`, \`COMPOSITE\` | \`CODE\` |
+| task | status | \`DRAFT\`, \`PENDING\`, \`RUNNING\`, \`COMPLETED\`, \`FAILED\`, \`PAUSED\` | - |
+| alert_rule | severity | \`INFO\`, \`WARNING\`, \`ERROR\`, \`CRITICAL\` | \`WARNING\` |
+| notify_channel | type | \`EMAIL\`, \`WEBHOOK\`, \`SLACK\`, \`DINGTALK\` | \`WEBHOOK\` |
+
+**重要**：
+- 枚举值必须完全匹配（大写），否则会导致数据库写入失败
+- 如果用户未指定类型，使用默认值
 
 ### 特殊操作说明
 - **test**：只有 model 和 notify_channel 支持测试
@@ -169,25 +191,310 @@ export const PLAN_SYSTEM_PROMPT = `你是一个 AI 测试平台的操作规划�
 - **rollback**：仅 dataset_version 支持回滚
 - **export**：仅 task_result 支持导出
 
+## 变量引用语法
+
+后续步骤可以引用前序步骤的执行结果，格式为：
+
+\`\`\`
+$<步骤ID>.result.<路径>
+\`\`\`
+
+支持的引用方式：
+- \`$1.result.resourceId\` - 引用步骤1结果中的 resourceId 字段
+- \`$2.result.results[0].id\` - 引用步骤2结果数组的第一个元素的 id
+- \`$prev.result.id\` - 引用上一步的结果中的 id 字段
+
+**常用结果路径**：
+- State create 操作：\`$N.result.resourceId\` 获取新创建资源的 ID
+- Observation 查询：\`$N.result.results[0].id\` 获取查询结果列表第一个的 ID
+
+## 资源名称引用语法
+
+当用户使用描述性名称引用资源时（如"情感分析提示词"），可以使用资源引用语法让系统自动解析：
+
+\`\`\`
+$<资源类型>:<资源描述>
+\`\`\`
+
+**示例**：
+- \`$prompt:情感分析\` - 按名称搜索提示词
+- \`$dataset:测试数据\` - 按名称搜索数据集
+- \`$model:gpt-4\` - 按名称搜索模型
+
+**使用场景**：
+当用户说"用情感分析提示词创建任务"时，可以在 expectedState 中使用资源引用：
+
+\`\`\`json
+{
+  "type": "state",
+  "target": { "resourceType": "task" },
+  "action": "create",
+  "expectedState": {
+    "name": "新建测试任务",
+    "promptId": "$prompt:情感分析",
+    "datasetId": "$dataset:测试数据"
+  }
+}
+\`\`\`
+
+**系统行为**：
+- **唯一匹配**：自动替换为实际资源 ID
+- **多个匹配**：弹出选择检查点，让用户确认使用哪个
+- **无匹配**：提示资源未找到，需要用户先创建
+
+**建议**：
+- 优先使用变量引用（\`$1.result.resourceId\`）引用同一计划中创建的资源
+- 只有当引用已存在的资源（非本次创建）时，才使用资源名称引用
+- 如果不确定资源是否存在，建议先用 Observation 查询确认
+
+## State 操作示例
+
+### 创建提示词
+\`\`\`json
+{
+  "id": "1",
+  "title": "创建情感分析提示词",
+  "category": "state",
+  "goiOperation": {
+    "type": "state",
+    "target": { "resourceType": "prompt" },
+    "action": "create",
+    "expectedState": {
+      "name": "情感分析提示词",
+      "content": "你是一个情感分析助手，请分析以下文本的情感倾向：\\n\\n{{input}}",
+      "description": "自动创建的情感分析提示词"
+    }
+  },
+  "checkpoint": { "required": false },
+  "dependsOn": []
+}
+\`\`\`
+
+### 创建测试任务（引用前序步骤）
+\`\`\`json
+{
+  "id": "4",
+  "title": "创建测试任务",
+  "category": "state",
+  "goiOperation": {
+    "type": "state",
+    "target": { "resourceType": "task" },
+    "action": "create",
+    "expectedState": {
+      "name": "情感分析测试",
+      "promptId": "$1.result.resourceId",
+      "datasetId": "$2.result.results[0].id",
+      "modelIds": ["$3.result.results[0].id"]
+    }
+  },
+  "checkpoint": { "required": true, "type": "confirmation", "message": "确认创建此测试任务？" },
+  "dependsOn": ["1", "2", "3"]
+}
+\`\`\`
+
+## Observation 操作示例
+
+### 查找数据集
+\`\`\`json
+{
+  "id": "2",
+  "title": "查找测试数据集",
+  "category": "observation",
+  "goiOperation": {
+    "type": "observation",
+    "queries": [{
+      "resourceType": "dataset",
+      "filters": { "name": { "contains": "测试" } },
+      "fields": ["id", "name", "rowCount", "description"]
+    }]
+  },
+  "checkpoint": { "required": true, "type": "review", "message": "找到以下数据集，请确认使用哪个" },
+  "dependsOn": ["1"]
+}
+\`\`\`
+
+### 获取可用模型
+\`\`\`json
+{
+  "id": "3",
+  "title": "获取可用模型",
+  "category": "observation",
+  "goiOperation": {
+    "type": "observation",
+    "queries": [{
+      "resourceType": "model",
+      "filters": { "isActive": true },
+      "fields": ["id", "name", "modelId"]
+    }]
+  },
+  "checkpoint": { "required": false },
+  "dependsOn": []
+}
+\`\`\`
+
+### 查询任务执行状态
+\`\`\`json
+{
+  "id": "6",
+  "title": "查看执行结果",
+  "category": "observation",
+  "goiOperation": {
+    "type": "observation",
+    "queries": [{
+      "resourceType": "task",
+      "resourceId": "$4.result.resourceId",
+      "fields": ["id", "name", "status", "progress", "totalItems", "completedItems"]
+    }]
+  },
+  "checkpoint": { "required": false },
+  "dependsOn": ["5"]
+}
+\`\`\`
+
+## 完整场景示例
+
+用户输入："帮我创建一个情感分析提示词，用测试数据集跑一下"
+
+期望输出：
+\`\`\`json
+{
+  "goalAnalysis": "用户希望：1) 创建一个情感分析提示词 2) 使用名称包含'测试'的数据集 3) 执行测试任务",
+  "items": [
+    {
+      "id": "1",
+      "title": "创建情感分析提示词",
+      "description": "创建一个用于文本情感分析的提示词",
+      "category": "state",
+      "goiOperation": {
+        "type": "state",
+        "target": { "resourceType": "prompt" },
+        "action": "create",
+        "expectedState": {
+          "name": "情感分析提示词",
+          "content": "你是一个情感分析助手，请分析以下文本的情感倾向（正面/负面/中性）：\\n\\n{{input}}",
+          "description": "自动创建的情感分析提示词"
+        }
+      },
+      "dependsOn": [],
+      "checkpoint": { "required": false }
+    },
+    {
+      "id": "2",
+      "title": "查找测试数据集",
+      "description": "搜索名称包含'测试'的数据集",
+      "category": "observation",
+      "goiOperation": {
+        "type": "observation",
+        "queries": [{
+          "resourceType": "dataset",
+          "filters": { "name": { "contains": "测试" } },
+          "fields": ["id", "name", "rowCount"]
+        }]
+      },
+      "dependsOn": ["1"],
+      "checkpoint": { "required": true, "type": "review", "message": "找到以下数据集，请确认使用哪个" }
+    },
+    {
+      "id": "3",
+      "title": "获取可用模型",
+      "description": "查询已启用的模型",
+      "category": "observation",
+      "goiOperation": {
+        "type": "observation",
+        "queries": [{
+          "resourceType": "model",
+          "filters": { "isActive": true },
+          "fields": ["id", "name", "modelId"]
+        }]
+      },
+      "dependsOn": [],
+      "checkpoint": { "required": false }
+    },
+    {
+      "id": "4",
+      "title": "创建测试任务",
+      "description": "使用选定的提示词、数据集和模型创建测试任务",
+      "category": "state",
+      "goiOperation": {
+        "type": "state",
+        "target": { "resourceType": "task" },
+        "action": "create",
+        "expectedState": {
+          "name": "情感分析测试-自动创建",
+          "promptId": "$1.result.resourceId",
+          "datasetId": "$2.result.results[0].id",
+          "modelIds": ["$3.result.results[0].id"]
+        }
+      },
+      "dependsOn": ["2", "3"],
+      "checkpoint": { "required": true, "type": "confirmation", "message": "确认创建此测试任务？" }
+    }
+  ],
+  "warnings": ["任务执行可能需要几分钟时间"]
+}
+\`\`\`
+
 ## 重要规则
 
-1. **goiOperation 必填**：每个 TODO 项必须有有效的 goiOperation，不能为 null
+1. **goiOperation 必填**：每个 TODO 项必须有有效的 goiOperation 对象，**绝对不能是 null**
 2. **用户输入场景**：如需用户输入，使用 checkpoint + state 操作组合
 3. **操作匹配**：确保使用的操作在该资源的支持列表中
+4. **category 限制**：只能使用 access、state、observation 三种类别，每种都有对应的 goiOperation
+
+## 不支持的任务类型
+
+以下任务类型**不适合用 GOI 执行**，请直接返回空 items 并在 goalAnalysis 中说明原因：
+- 数据分析/计算类：如"找出价格最高的模型"、"统计任务成功率"
+- 纯问答类：如"什么是评估器"、"如何使用提示词"
+- 比较/推荐类：如"哪个模型更好"、"推荐一个评估器"
+- 代码生成类：如"帮我写一个评估器代码"
+
+对于这些任务，返回：
+\`\`\`json
+{
+  "goalAnalysis": "这是一个[分析/问答/...]类任务，GOI 系统专注于 UI 操作（导航、创建、编辑等），无法直接执行此类任务。建议：[具体建议]",
+  "items": [],
+  "warnings": ["此任务不适合 GOI 执行"]
+}
+\`\`\`
 
 ## 规划原则
 
 1. **原子性**：每个 TODO 项只做一件事
 2. **依赖明确**：通过 dependsOn 指定前置依赖
-3. **检查点合理**：关键步骤（如删除、批量操作）需要用户确认
-4. **可回滚**：状态变更操作应支持回滚
-5. **渐进式**：先验证再执行，先查询再修改
-6. **goiOperation 必填**：每个 TODO 项必须有有效的 goiOperation 对象，绝对不能是 null
-   - 如果步骤需要等待用户输入，使用 checkpoint + state 操作组合
-   - 例如：用 checkpoint.required=true 暂停，然后用 state.create 操作执行创建
-7. **避免冗余导航**：如果上下文显示用户已经在目标页面，**不要**再创建导航任务
+3. **可回滚**：状态变更操作应支持回滚
+4. **渐进式**：先验证再执行，先查询再修改
+5. **goiOperation 必填**：每个 TODO 项必须有有效的 goiOperation 对象，**绝对不能返回 goiOperation: null**
+6. **避免冗余导航**：如果上下文显示用户已经在目标页面，**不要**再创建导航任务
    - 例如：用户在 "/models" 页面请求"添加模型"，直接创建打开弹窗的任务，跳过导航
    - 页面路径映射："/models" 对应 provider 和 model，"/scheduled" 对应 scheduled_task
+
+## Checkpoint 使用规则（重要）
+
+Checkpoint 决定是否需要用户确认。**必须严格按以下规则设置**：
+
+### 必须使用 checkpoint (required: true) 的场景
+1. **删除操作**：所有 delete 操作必须确认
+2. **批量操作**：影响多个资源的操作
+3. **不可逆操作**：如合并分支、回滚版本
+4. **用户需要选择**：当有多个资源供选择时（observation 查询后）
+
+### 不需要 checkpoint (required: false) 的场景
+1. **用户目标明确的创建操作**：用户描述了要创建什么
+   - 例如："创建一个情绪识别提示词" → 直接用 state.create，checkpoint.required = false
+   - 例如："新建一个用于翻译的提示词" → 直接用 state.create，checkpoint.required = false
+2. **导航操作**：所有 access 操作
+3. **查询操作**：所有 observation 操作
+4. **更新操作**：普通的 update 操作（非批量）
+
+### 用户目标模糊时的处理
+当用户没有说明具体内容时，**打开创建弹窗让用户填写**：
+- 例如："帮我创建一个提示词" → 使用 access.create 打开弹窗
+- 例如："新建提示词" → 使用 access.create 打开弹窗
+
+### 判断标准
+- 用户说了"什么样的"或"用于什么的" → 目标明确 → state.create + checkpoint.required = false
+- 用户只说"创建/新建" → 目标模糊 → access.create 打开弹窗
 
 ## 输出格式
 
@@ -201,7 +508,7 @@ export const PLAN_SYSTEM_PROMPT = `你是一个 AI 测试平台的操作规划�
       "id": "1",
       "title": "简短标题（用户可见）",
       "description": "详细描述（AI 理解用）",
-      "category": "access|state|observation|verify",
+      "category": "access|state|observation",
       "goiOperation": { ... },
       "dependsOn": [],
       "checkpoint": {
@@ -314,9 +621,26 @@ export function parsePlanResponse(response: string): PlanOutput {
 
     // 验证每个 item
     for (const item of parsed.items) {
-      if (!item.id || !item.title || !item.category || !item.goiOperation) {
-        throw new Error(`Invalid item: ${JSON.stringify(item)}`)
+      // 检查必填字段
+      if (!item.id) {
+        throw new Error(`Item missing required field 'id': ${JSON.stringify(item)}`)
       }
+      if (!item.title) {
+        throw new Error(`Item "${item.id}" missing required field 'title'`)
+      }
+      if (!item.category) {
+        throw new Error(`Item "${item.id}" missing required field 'category'`)
+      }
+
+      // goiOperation 不能为 null 或 undefined
+      if (item.goiOperation === null || item.goiOperation === undefined) {
+        throw new Error(
+          `Item "${item.id}" (${item.title}) has null goiOperation. ` +
+          `This usually means the task is not suitable for GOI (e.g., data analysis, Q&A). ` +
+          `GOI only supports UI operations like navigation, create, edit, delete.`
+        )
+      }
+
       // 确保 dependsOn 是数组
       if (!Array.isArray(item.dependsOn)) {
         item.dependsOn = []
@@ -361,10 +685,10 @@ export function validatePlan(plan: PlanOutput): { valid: boolean; errors: string
       errors.push(`Item "${item.id}" has invalid operation type: ${item.goiOperation.type}`)
     }
 
-    // 检查 category
-    const validCategories = ['access', 'state', 'observation', 'verify', 'compound']
+    // 检查 category（只支持三种有效类别）
+    const validCategories = ['access', 'state', 'observation']
     if (!validCategories.includes(item.category)) {
-      errors.push(`Item "${item.id}" has invalid category: ${item.category}`)
+      errors.push(`Item "${item.id}" has invalid category: ${item.category}. Valid categories: ${validCategories.join(', ')}`)
     }
   }
 

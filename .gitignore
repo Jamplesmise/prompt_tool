@@ -37,5 +37,10 @@ test-results/
 # Prisma
 prisma/*.db
 
+# Certificates (local development SSL)
+certificates/
+*.pem
+*.key
+
 # Misc
 *.tsbuildinfo

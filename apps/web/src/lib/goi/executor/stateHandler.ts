@@ -51,26 +51,93 @@ const resourceModelMap: Partial<Record<ResourceType, string>> = {
 
 /**
  * 只读字段（不允许通过 State 操作修改）
+ * 注意：使用 createdById（标量字段）而不是 createdBy（关系字段）
  */
 const readOnlyFields: Record<string, string[]> = {
   // 核心资源
-  prompt: ['id', 'createdAt', 'createdBy'],
-  dataset: ['id', 'createdAt', 'createdBy'],
+  prompt: ['id', 'createdAt', 'createdById'],
+  dataset: ['id', 'createdAt', 'createdById'],
   model: ['id', 'createdAt'],
-  evaluator: ['id', 'createdAt', 'createdBy'],
-  task: ['id', 'createdAt', 'createdBy', 'startedAt', 'completedAt'],
+  evaluator: ['id', 'createdAt', 'createdById'],
+  task: ['id', 'createdAt', 'createdById', 'startedAt', 'completedAt'],
   // 衍生资源
   provider: ['id', 'createdAt'],
-  prompt_version: ['id', 'createdAt', 'createdBy', 'promptId', 'version'],
-  prompt_branch: ['id', 'createdAt', 'createdBy', 'promptId', 'mergedAt', 'mergedBy'],
-  dataset_version: ['id', 'createdAt', 'createdBy', 'datasetId', 'version'],
+  prompt_version: ['id', 'createdAt', 'createdById', 'promptId', 'version'],
+  prompt_branch: ['id', 'createdAt', 'createdById', 'promptId', 'mergedAt', 'mergedBy'],
+  dataset_version: ['id', 'createdAt', 'createdById', 'datasetId', 'version'],
   // 系统资源
-  scheduled_task: ['id', 'createdAt', 'createdBy', 'lastRunAt', 'nextRunAt'],
-  alert_rule: ['id', 'createdAt', 'createdBy'],
-  notify_channel: ['id', 'createdAt', 'createdBy'],
+  scheduled_task: ['id', 'createdAt', 'createdById', 'lastRunAt', 'nextRunAt'],
+  alert_rule: ['id', 'createdAt', 'createdById'],
+  notify_channel: ['id', 'createdAt', 'createdById'],
   // Schema 资源
-  input_schema: ['id', 'createdAt', 'createdBy'],
-  output_schema: ['id', 'createdAt', 'createdBy'],
+  input_schema: ['id', 'createdAt', 'createdById'],
+  output_schema: ['id', 'createdAt', 'createdById'],
+}
+
+/**
+ * 枚举值映射表
+ * 将常见的值映射到正确的枚举值（大写）
+ */
+const enumValueMappings: Record<string, Record<string, Record<string, string>>> = {
+  provider: {
+    type: {
+      openai: 'OPENAI',
+      anthropic: 'ANTHROPIC',
+      azure: 'AZURE',
+      custom: 'CUSTOM',
+      mock: 'CUSTOM', // mock 映射到 CUSTOM
+    },
+  },
+  evaluator: {
+    type: {
+      preset: 'PRESET',
+      code: 'CODE',
+      llm: 'LLM',
+      composite: 'COMPOSITE',
+    },
+  },
+  alert_rule: {
+    severity: {
+      info: 'INFO',
+      warning: 'WARNING',
+      error: 'ERROR',
+      critical: 'CRITICAL',
+    },
+  },
+  notify_channel: {
+    type: {
+      email: 'EMAIL',
+      webhook: 'WEBHOOK',
+      slack: 'SLACK',
+      dingtalk: 'DINGTALK',
+    },
+  },
+}
+
+/**
+ * 规范化数据中的枚举值
+ */
+function normalizeEnumValues(
+  resourceType: string,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const mappings = enumValueMappings[resourceType]
+  if (!mappings) return data
+
+  const normalized = { ...data }
+  for (const [field, valueMap] of Object.entries(mappings)) {
+    if (field in normalized) {
+      const value = normalized[field]
+      if (typeof value === 'string') {
+        const lowerValue = value.toLowerCase()
+        if (lowerValue in valueMap) {
+          normalized[field] = valueMap[lowerValue]
+          console.log(`[StateHandler] Normalized ${resourceType}.${field}: "${value}" -> "${valueMap[lowerValue]}"`)
+        }
+      }
+    }
+  }
+  return normalized
 }
 
 /**
@@ -95,6 +162,51 @@ const requiredFields: Record<string, string[]> = {
   // Schema 资源
   input_schema: ['name', 'variables'],
   output_schema: ['name', 'fields'],
+}
+
+/**
+ * 允许的字段（过滤掉 schema 中不存在的字段）
+ */
+const allowedFields: Record<string, string[]> = {
+  // 核心资源
+  prompt: ['name', 'content', 'description', 'inputSchemaId', 'outputSchemaId', 'evaluationSchemaId', 'isActive'],
+  dataset: ['name', 'description', 'inputSchemaId', 'columns', 'rowCount'],
+  model: ['name', 'providerId', 'modelId', 'description', 'isActive', 'maxTokens', 'temperature', 'pricing'],
+  evaluator: ['name', 'type', 'description', 'config', 'code', 'isActive'],
+  task: ['name', 'description', 'datasetId', 'promptId', 'promptVersionId', 'modelIds', 'evaluatorIds', 'evaluationSchemaId', 'status', 'config', 'abConfig'],
+  // 衍生资源 - Provider 没有 description 和 createdById
+  provider: ['name', 'type', 'baseUrl', 'apiKey', 'headers', 'isActive', 'teamId'],
+  prompt_version: ['promptId', 'content', 'description', 'variables', 'changelog'],
+  prompt_branch: ['promptId', 'name', 'description', 'sourceVersionId', 'isActive'],
+  dataset_version: ['datasetId', 'version', 'description', 'rowCount', 'columns', 'rowHashes'],
+  // 系统资源
+  scheduled_task: ['name', 'description', 'taskTemplateId', 'cronExpression', 'isActive', 'nextRunAt'],
+  alert_rule: ['name', 'description', 'metric', 'condition', 'threshold', 'severity', 'notifyChannelIds', 'isActive'],
+  notify_channel: ['name', 'type', 'config', 'isActive'],
+  // Schema 资源
+  input_schema: ['name', 'description', 'variables'],
+  output_schema: ['name', 'description', 'fields'],
+}
+
+/**
+ * 过滤掉不允许的字段
+ */
+function filterAllowedFields(
+  resourceType: string,
+  data: Record<string, unknown>
+): Record<string, unknown> {
+  const allowed = allowedFields[resourceType]
+  if (!allowed) return data
+
+  const filtered: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(data)) {
+    if (allowed.includes(key)) {
+      filtered[key] = value
+    } else {
+      console.log(`[StateHandler] Filtered out unknown field: ${resourceType}.${key}`)
+    }
+  }
+  return filtered
 }
 
 // ============================================
@@ -248,11 +360,26 @@ export class StateHandler {
       throw new Error(`Unsupported resource type: ${target.resourceType}`)
     }
 
-    // 准备创建数据
+    // 1. 过滤掉 schema 中不存在的字段
+    const filteredState = filterAllowedFields(
+      target.resourceType,
+      expectedState as Record<string, unknown>
+    )
+
+    // 2. 规范化枚举值（将小写/错误值转换为正确的枚举值）
+    const normalizedState = normalizeEnumValues(
+      target.resourceType,
+      filteredState
+    )
+
+    // 3. 检查资源类型是否支持 createdById（Provider 不支持）
+    const supportsCreatedById = !['provider'].includes(target.resourceType)
+
+    // 4. 准备创建数据
     const createData = {
-      ...expectedState,
-      // 添加默认字段
-      ...(this.context.userId && { createdBy: this.context.userId }),
+      ...normalizedState,
+      // 添加默认字段（使用 createdById 而不是 createdBy 关系字段）
+      ...(supportsCreatedById && this.context.userId && { createdById: this.context.userId }),
       ...(this.context.teamId && { teamId: this.context.teamId }),
     }
 
@@ -381,6 +508,8 @@ export class StateHandler {
     })
 
     return {
+      action: 'create',
+      resourceType: target.resourceType,
       resourceId: created.id,
       currentState: created as Record<string, unknown>,
       changedFields: Object.keys(expectedState),
@@ -471,6 +600,8 @@ export class StateHandler {
     if (changes.length === 0) {
       // 没有变更
       return {
+        action: 'update',
+        resourceType: target.resourceType,
         previousState: current,
         currentState: current,
         resourceId,
@@ -616,6 +747,8 @@ export class StateHandler {
     })
 
     return {
+      action: 'update',
+      resourceType: target.resourceType,
       previousState: current,
       currentState: updated,
       resourceId,
@@ -775,6 +908,8 @@ export class StateHandler {
     })
 
     return {
+      action: 'delete',
+      resourceType: target.resourceType,
       previousState: current,
       resourceId,
       changedFields: [],

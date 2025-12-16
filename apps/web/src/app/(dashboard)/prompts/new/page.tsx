@@ -8,6 +8,7 @@ import { VariableList } from '@/components/prompt'
 import { FormSection, CodeEditor } from '@/components/common'
 import { useCreatePrompt } from '@/hooks/usePrompts'
 import { extractVariables } from '@/lib/template'
+import { useGoiFormPrefill } from '@/hooks/useGoiFormPrefill'
 
 const { Title } = Typography
 const { TextArea } = Input
@@ -18,6 +19,19 @@ export default function NewPromptPage() {
   const [systemPrompt, setSystemPrompt] = useState('')
   const [content, setContent] = useState('')
   const createPrompt = useCreatePrompt()
+
+  // GOI 表单预填支持
+  useGoiFormPrefill(form, 'prompt-form', {
+    onPrefill: (data) => {
+      // 处理非表单字段的预填（CodeEditor 使用的 state）
+      if (data.systemPrompt && typeof data.systemPrompt === 'string') {
+        setSystemPrompt(data.systemPrompt)
+      }
+      if (data.content && typeof data.content === 'string') {
+        setContent(data.content)
+      }
+    },
+  })
 
   // 从系统提示词和用户提示词中合并提取变量
   const variables = useMemo(() => {

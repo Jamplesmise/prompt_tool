@@ -221,6 +221,7 @@ chore: 杂项
 |------|------|------|------|
 | 结构化评估升级 | `docs/structured-evaluation-plan/` | 基础结构化能力、AI配置助手、体验优化（3阶段） | ✅ 代码完成 |
 | GOI L2 升级 | `docs/goi-l2-upgrade/` | 多步骤规划、检查点确认、暂停续跑、接管交还、操作感知（6阶段） | ✅ 已完成 |
+| GOI Demo 增强 | `docs/goi-demo-enhancement/` | Handler 层实现 + 前端集成补全 + 端到端演示（含 DESIGN.md 技术设计、TASKS.md Handler 任务、FRONTEND-INTEGRATION-PLAN.md 前端任务） | 📋 规划完成 |
 | UI 设计系统 | `docs/design-system/` | 基础主题、核心组件、页面重构、交互增强、打磨优化（5阶段） | |
 | UI 功能开发 | `docs/design-ui-plan/` | 仪表盘、任务列表、提示词管理、数据集上传、模型配置、评估器、监控、全局搜索、设置（9模块） | |
 | 系统集成 | `docs/integration-plan/` | 基础设施、成员分组、组织管理、权限系统、FastGPT API、测试验证（6阶段） | |
@@ -298,6 +299,12 @@ chore: 杂项
 - 暂停续跑（模式切换保持状态）
 - 接管交还（用户随时接管控制权）
 - 操作感知（追踪用户操作，协调计划状态）
+
+**GOI Demo 增强**：📋 规划完成（预计 4-6 天）
+- Handler 层：State Handler（CRUD）、Observation Handler（查询）、变量解析器
+- 前端层：弹窗监听补全（9页面）、表单自动预填、State-UI 联动、资源 ID 解析
+- 演示场景：端到端自动化流程（用户一句话 → 系统自动执行 80% 操作）
+- 文档：DESIGN.md（技术设计）、TASKS.md（Handler 任务）、FRONTEND-INTEGRATION-PLAN.md（前端任务）
 
 ## 快速开始新功能
 

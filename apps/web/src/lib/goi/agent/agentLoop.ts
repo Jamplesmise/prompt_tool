@@ -53,6 +53,10 @@ export type AgentLoopStatus =
 export type AgentLoopConfig = {
   /** 会话 ID */
   sessionId: string
+  /** 用户 ID（用于创建资源时设置 createdById） */
+  userId?: string
+  /** 团队 ID（用于创建资源时设置 teamId） */
+  teamId?: string
   /** 模型 ID（必填，用于计划生成和验证） */
   modelId: string
   /** Planner 配置 */
@@ -63,6 +67,8 @@ export type AgentLoopConfig = {
   verifierConfig?: Omit<VerifierConfig, 'modelId'>
   /** 是否自动运行（生成计划后立即开始执行） */
   autoRun?: boolean
+  /** 运行模式：manual（手动）, assisted（辅助）, auto（自动） */
+  mode?: 'manual' | 'assisted' | 'auto'
   /** 失败后最大重试次数 */
   maxRetries?: number
   /** 步骤间延迟（毫秒） */
@@ -145,7 +151,11 @@ export class AgentLoop {
       modelId: config.modelId,
       ...config.verifierConfig,
     })
-    this.executor = new GoiExecutor({ sessionId: config.sessionId })
+    this.executor = new GoiExecutor({
+      sessionId: config.sessionId,
+      userId: config.userId,
+      teamId: config.teamId,
+    })
   }
 
   // ============================================
@@ -161,6 +171,7 @@ export class AgentLoop {
     console.log('[AgentLoop] start() called with config:', {
       sessionId: this.config.sessionId,
       autoRun: this.config.autoRun,
+      mode: this.config.mode,
       modelId: this.config.modelId,
     })
 
@@ -328,9 +339,11 @@ export class AgentLoop {
     })))
 
     const manager = wrapTodoList(this.todoList)
+    console.log('[AgentLoop] Wrapped todoList, getting next item...')
 
     // 1. 获取下一个待执行项
     const item = manager.getNextItem()
+    console.log('[AgentLoop] getNextItem() returned:', item ? { id: item.id, title: item.title, status: item.status } : null)
     if (!item) {
       // 检查是否全部完成
       if (manager.isAllCompleted()) {
@@ -361,28 +374,94 @@ export class AgentLoop {
     }
 
     // 2. 更新状态为 in_progress
+    console.log('[AgentLoop] Transitioning item to in_progress...')
     const transitionContext: TransitionContext = {
       sessionId: this.config.sessionId,
       todoListId: this.todoList.id,
     }
     await transitionTodoItem(item, 'in_progress', transitionContext)
     manager.updateItem(item.id, { status: 'in_progress' }) // 触发 stats 更新
+    console.log('[AgentLoop] Item transitioned to in_progress')
 
     // 3. Gather - 收集上下文
+    console.log('[AgentLoop] Gathering context...')
     const context = await this.gatherer.gatherContext(item, this.todoList)
+    console.log('[AgentLoop] Context gathered, pendingResourceSelections:', context.pendingResourceSelections.length, 'failedResourceResolutions:', context.failedResourceResolutions.length)
 
     // 4. 检查点判断
-    if (item.checkpoint?.required && !this.shouldAutoApprove(item, context)) {
+    console.log('[AgentLoop] Checkpoint check:', {
+      checkpointRequired: item.checkpoint?.required,
+      checkpointType: item.checkpoint?.type,
+      checkpointMessage: item.checkpoint?.message,
+    })
+    const shouldAutoApproveResult = this.shouldAutoApprove(item, context)
+    console.log('[AgentLoop] shouldAutoApprove:', shouldAutoApproveResult)
+
+    if (item.checkpoint?.required && !shouldAutoApproveResult) {
+      console.log('[AgentLoop] Triggering checkpoint, transitioning to waiting...')
       await transitionTodoItem(item, 'waiting', {
         ...transitionContext,
         reason: item.checkpoint.message || '需要用户确认',
       })
       manager.updateItem(item.id, { status: 'waiting' }) // 触发 stats 更新
       await this.saveTodoList()
+      console.log('[AgentLoop] Item transitioned to waiting, returning with waiting=true')
+      return { done: false, waiting: true, currentItem: item }
+    }
+
+    // 4.1 资源选择检查点（有待确认的资源引用）
+    if (context.pendingResourceSelections.length > 0) {
+      // 动态为 item 添加 checkpoint
+      const resourceSelection = context.pendingResourceSelections[0]
+      const checkpointOptions = resourceSelection.candidates.map((c) => ({
+        id: c.id,
+        label: c.name,
+        description: c.description || undefined,
+      }))
+
+      // 设置检查点信息
+      item.checkpoint = {
+        required: true,
+        type: 'resource_selection',
+        message: `找到多个匹配的资源："${resourceSelection.hint}"，请选择要使用的资源：`,
+      }
+
+      await transitionTodoItem(item, 'waiting', {
+        ...transitionContext,
+        reason: item.checkpoint.message,
+      })
+      manager.updateItem(item.id, {
+        status: 'waiting',
+        checkpoint: {
+          ...item.checkpoint,
+          options: checkpointOptions,
+        },
+      })
+      await this.saveTodoList()
+      return { done: false, waiting: true, currentItem: item }
+    }
+
+    // 4.2 资源解析失败检查点
+    if (context.failedResourceResolutions.length > 0) {
+      const failed = context.failedResourceResolutions[0]
+      item.checkpoint = {
+        required: true,
+        type: 'resource_not_found',
+        message: `无法找到资源："${failed.hint}"（${failed.error}）。请先创建该资源，或取消此操作。`,
+      }
+
+      await transitionTodoItem(item, 'waiting', {
+        ...transitionContext,
+        reason: item.checkpoint.message,
+      })
+      manager.updateItem(item.id, { status: 'waiting', checkpoint: item.checkpoint })
+      await this.saveTodoList()
       return { done: false, waiting: true, currentItem: item }
     }
 
     // 5. Act - 执行操作
+    console.log('[AgentLoop] No checkpoint required, proceeding to execution...')
+    console.log('[AgentLoop] Executing operation:', item.goiOperation)
     let executionResult: GoiExecutionResult
     try {
       executionResult = await this.executor.execute(item.goiOperation as GoiOperation)
@@ -528,8 +607,15 @@ export class AgentLoop {
 
   /**
    * 用户确认检查点
+   * @param itemId - 待确认的项 ID
+   * @param feedback - 用户反馈
+   * @param selectedResourceId - 资源选择检查点时，用户选择的资源 ID
    */
-  async approveCheckpoint(itemId: string, feedback?: string): Promise<StepResult> {
+  async approveCheckpoint(
+    itemId: string,
+    feedback?: string,
+    selectedResourceId?: string
+  ): Promise<StepResult> {
     if (!this.todoList) {
       throw new Error('No TODO List')
     }
@@ -541,12 +627,77 @@ export class AgentLoop {
       throw new Error('Item not found or not waiting')
     }
 
-    // 标记完成
     const transitionContext: TransitionContext = {
       sessionId: this.config.sessionId,
       todoListId: this.todoList.id,
       reason: 'User approved',
     }
+
+    // 处理资源选择检查点
+    if (item.checkpoint?.type === 'resource_selection' && selectedResourceId) {
+      // 更新 goiOperation 中的资源引用
+      if (item.goiOperation) {
+        const operation = item.goiOperation as Record<string, unknown>
+
+        // 递归查找并替换资源引用占位符
+        const replaceResourceReference = (obj: unknown): unknown => {
+          if (typeof obj === 'string' && obj.startsWith('$')) {
+            // 这是一个资源引用，替换为选中的 ID
+            return selectedResourceId
+          }
+          if (Array.isArray(obj)) {
+            return obj.map(replaceResourceReference)
+          }
+          if (obj !== null && typeof obj === 'object') {
+            const result: Record<string, unknown> = {}
+            for (const [key, value] of Object.entries(obj)) {
+              result[key] = replaceResourceReference(value)
+            }
+            return result
+          }
+          return obj
+        }
+
+        // 替换 target.resourceId 或 expectedState 中的引用
+        if ('target' in operation) {
+          const target = operation.target as Record<string, unknown>
+          if (target.resourceId && typeof target.resourceId === 'string' && target.resourceId.startsWith('$')) {
+            target.resourceId = selectedResourceId
+          }
+        }
+        if ('expectedState' in operation) {
+          operation.expectedState = replaceResourceReference(operation.expectedState)
+        }
+        if ('queries' in operation) {
+          operation.queries = replaceResourceReference(operation.queries)
+        }
+      }
+
+      // 清除检查点，重新执行
+      item.checkpoint = { required: false }
+
+      // 将状态改回 pending，让 step() 重新执行
+      await transitionTodoItem(item, 'pending', {
+        ...transitionContext,
+        reason: `Resource selected: ${selectedResourceId}`,
+      })
+      manager.updateItem(itemId, {
+        status: 'pending',
+        checkpoint: { required: false },
+        userFeedback: feedback || `Selected resource: ${selectedResourceId}`,
+      })
+      await this.saveTodoList()
+
+      // 如果之前是 waiting 状态，继续运行
+      if (this.status === 'waiting') {
+        this.status = 'running'
+        return this.step()
+      }
+
+      return { done: false, waiting: false, currentItem: item }
+    }
+
+    // 标准检查点确认 - 标记完成
     await transitionTodoItem(item, 'completed', transitionContext)
     // 更新 item 并触发 stats 重新计算
     manager.updateItem(itemId, { userFeedback: feedback, status: 'completed' })
@@ -689,6 +840,23 @@ export class AgentLoop {
         // 评估失败，不自动通过
       }
     }
+
+    // 自动模式下，非删除操作自动批准
+    if (this.config.mode === 'auto') {
+      const operation = item.goiOperation as { action?: string } | undefined
+      const action = operation?.action
+
+      // 删除操作始终需要用户确认
+      if (action === 'delete') {
+        console.log('[AgentLoop] Auto mode: delete operation requires confirmation')
+        return false
+      }
+
+      // 其他操作自动批准
+      console.log('[AgentLoop] Auto mode: auto-approving non-delete operation')
+      return true
+    }
+
     return false
   }
 

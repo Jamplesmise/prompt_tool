@@ -6,12 +6,14 @@
  * 展示待确认的检查点：
  * - AI 选择及原因
  * - 候选项选择
+ * - Observation 查询结果展示
  * - 预览数据
  * - 操作按钮
  */
 
 import React, { useState, useMemo } from 'react'
-import { Card, Button, Space, Typography, Tag, Modal, Spin, Radio, Alert, Divider } from 'antd'
+import { Card, Button, Space, Typography, Tag, Modal, Spin, Radio, Alert, Divider, Table, List } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import {
   PauseCircleOutlined,
   CheckOutlined,
@@ -21,12 +23,145 @@ import {
   EyeOutlined,
   BulbOutlined,
   FastForwardOutlined,
+  SearchOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons'
 import { useCopilot } from '../hooks/useCopilot'
 import type { PendingCheckpointState } from '@platform/shared'
 import styles from './styles.module.css'
 
 const { Paragraph, Text } = Typography
+
+// ============================================
+// Observation 结果展示组件
+// ============================================
+
+type ObservationResultViewProps = {
+  preview: unknown
+  onSelect?: (item: Record<string, unknown>) => void
+  selectedId?: string
+}
+
+/**
+ * 友好展示 Observation 查询结果
+ */
+const ObservationResultView: React.FC<ObservationResultViewProps> = ({
+  preview,
+  onSelect,
+  selectedId,
+}) => {
+  const previewData = preview as Record<string, unknown> | undefined
+  if (!previewData) return null
+
+  // 检查是否为 Observation 结果格式
+  const results = previewData.results as Array<{
+    queryIndex: number
+    resourceType: string
+    data: unknown
+  }> | undefined
+
+  if (!results || !Array.isArray(results)) {
+    // 非 Observation 结果，返回原始 JSON
+    return (
+      <pre style={{ maxHeight: 200, overflow: 'auto', fontSize: 12 }}>
+        {JSON.stringify(preview, null, 2)}
+      </pre>
+    )
+  }
+
+  return (
+    <div style={{ maxHeight: 300, overflow: 'auto' }}>
+      {results.map((queryResult, idx) => {
+        const items = Array.isArray(queryResult.data)
+          ? queryResult.data
+          : queryResult.data
+          ? [queryResult.data]
+          : []
+
+        if (items.length === 0) {
+          return (
+            <Alert
+              key={idx}
+              type="warning"
+              message={`${queryResult.resourceType}: 无结果`}
+              style={{ marginBottom: 8 }}
+            />
+          )
+        }
+
+        // 动态生成表格列
+        const firstItem = items[0] as Record<string, unknown>
+        const columns: ColumnsType<Record<string, unknown>> = []
+
+        // 选择列（如果支持选择）
+        if (onSelect) {
+          columns.push({
+            title: '',
+            dataIndex: '_select',
+            width: 40,
+            render: (_, record) => (
+              <Radio
+                checked={selectedId === record.id}
+                onClick={() => onSelect(record)}
+              />
+            ),
+          })
+        }
+
+        // 常用字段优先显示
+        const priorityFields = ['name', 'id', 'status', 'description']
+        const otherFields = Object.keys(firstItem).filter(
+          (k) => !priorityFields.includes(k) && !k.startsWith('_')
+        )
+        const displayFields = [
+          ...priorityFields.filter((f) => f in firstItem),
+          ...otherFields.slice(0, 3), // 最多再显示3个其他字段
+        ]
+
+        for (const field of displayFields) {
+          columns.push({
+            title: field,
+            dataIndex: field,
+            key: field,
+            ellipsis: true,
+            width: field === 'id' ? 80 : field === 'description' ? 200 : 120,
+            render: (value) => {
+              if (value === null || value === undefined) return '-'
+              if (typeof value === 'boolean') return value ? '是' : '否'
+              if (typeof value === 'object') return JSON.stringify(value)
+              const str = String(value)
+              return str.length > 30 ? str.substring(0, 30) + '...' : str
+            },
+          })
+        }
+
+        return (
+          <div key={idx} style={{ marginBottom: 12 }}>
+            <div style={{ marginBottom: 8 }}>
+              <Tag icon={<DatabaseOutlined />} color="blue">
+                {queryResult.resourceType}
+              </Tag>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {items.length} 条结果
+              </Text>
+            </div>
+            <Table
+              dataSource={items.map((item, i) => ({
+                ...item as Record<string, unknown>,
+                key: (item as Record<string, unknown>).id || i,
+              }))}
+              columns={columns}
+              size="small"
+              pagination={false}
+              scroll={{ x: 'max-content' }}
+              style={{ fontSize: 12 }}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export const CheckpointSection: React.FC = () => {
   const { pendingCheckpoint: rawCheckpoint, respondCheckpoint, isResponding } = useCopilot()
@@ -194,8 +329,8 @@ export const CheckpointSection: React.FC = () => {
             </Button>
           )}
 
-          {/* 操作按钮 */}
-          <Space wrap className={styles.checkpointActions}>
+          {/* 操作按钮 - 简化为两个主要按钮 */}
+          <Space className={styles.checkpointActions}>
             <Button
               type="primary"
               icon={hasChangedSelection ? <SwapOutlined /> : <CheckOutlined />}
@@ -203,56 +338,34 @@ export const CheckpointSection: React.FC = () => {
               disabled={isResponding}
               data-testid="checkpoint-approve"
             >
-              {hasChangedSelection ? '使用选中项' : '确认'}
+              {hasChangedSelection ? '使用选中项' : '确认执行'}
             </Button>
             <Button
-              icon={<FastForwardOutlined />}
-              onClick={handleSkip}
-              disabled={isResponding}
-              data-testid="checkpoint-skip"
-            >
-              跳过此步
-            </Button>
-            <Button
-              icon={<UserOutlined />}
-              onClick={handleTakeover}
-              disabled={isResponding}
-              data-testid="checkpoint-takeover"
-            >
-              我来操作
-            </Button>
-            <Button
-              danger
               icon={<CloseOutlined />}
               onClick={handleReject}
               disabled={isResponding}
               data-testid="checkpoint-reject"
             >
-              取消任务
+              取消
             </Button>
           </Space>
-
-          {/* 提示文字 */}
-          <Alert
-            type="info"
-            message="确认后，AI 将继续执行下一步操作"
-            style={{ marginTop: 12 }}
-            showIcon
-          />
         </Spin>
       </Card>
 
       {/* 预览弹窗 */}
       <Modal
-        title="操作预览"
+        title={
+          <Space>
+            <SearchOutlined />
+            查询结果预览
+          </Space>
+        }
         open={previewVisible}
         onCancel={() => setPreviewVisible(false)}
         footer={null}
-        width={600}
+        width={700}
       >
-        <pre style={{ maxHeight: 400, overflow: 'auto' }}>
-          {JSON.stringify(pendingCheckpoint.preview, null, 2)}
-        </pre>
+        <ObservationResultView preview={pendingCheckpoint.preview} />
       </Modal>
     </>
   )

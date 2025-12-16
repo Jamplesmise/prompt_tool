@@ -20,6 +20,9 @@ import {
 } from '@/components/prompt'
 import type { PromptFiltersValue } from '@/components/prompt'
 import { appMessage } from '@/lib/message'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { useGoiResourceListener } from '@/hooks/useGoiResourceListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -56,6 +59,14 @@ export default function PromptsPage() {
   const copyPrompt = useCopyPrompt()
   const batchDelete = useBatchDeletePrompts()
   const batchExport = useBatchExportPrompts()
+
+  // GOI 弹窗事件监听 - 创建时导航到新建页面
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_PROMPT]: () => router.push('/prompts/new'),
+  })
+
+  // GOI 资源变更监听 - 自动刷新列表
+  useGoiResourceListener('prompt')
 
   // 处理筛选变化
   const handleFiltersChange = useCallback((newFilters: PromptFiltersValue) => {

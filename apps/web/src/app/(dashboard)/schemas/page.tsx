@@ -35,6 +35,8 @@ import {
 } from '@/hooks/useSchemas'
 import { InferSchemaModal } from '@/components/schema'
 import type { EvaluationSchemaListItem } from '@platform/shared'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title, Text } = Typography
 
@@ -46,6 +48,13 @@ export default function SchemasPage() {
   // 获取数据
   const { data: schemas, isLoading } = useEvaluationSchemas(search)
   const deleteMutation = useDeleteEvaluationSchema()
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_INPUT_SCHEMA]: () => router.push('/schemas/new'),
+    [GOI_DIALOG_IDS.CREATE_OUTPUT_SCHEMA]: () => router.push('/schemas/new'),
+    [GOI_DIALOG_IDS.INFER_SCHEMA]: () => setInferModalOpen(true),
+  })
 
   // 处理编辑
   const handleEdit = (id: string) => {

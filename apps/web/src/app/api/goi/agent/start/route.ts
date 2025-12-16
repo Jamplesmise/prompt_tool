@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
       goal,
       modelId,
       autoRun = false,
+      mode = 'assisted', // 运行模式：manual, assisted, auto
       maxRetries = 3,
       stepDelay = 500,
       plannerConfig,
@@ -78,10 +79,12 @@ export async function POST(request: NextRequest) {
       goal: goal.substring(0, 50),
     })
 
-    // 获取或创建 Agent Loop
+    // 获取或创建 Agent Loop（传递用户 ID 用于资源创建）
     const agentLoop = agentSessionManager.getOrCreate(sessionId, {
       modelId,
+      userId: session.id,
       autoRun,
+      mode, // 传递运行模式
       maxRetries,
       stepDelay,
       plannerConfig,

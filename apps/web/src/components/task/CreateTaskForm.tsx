@@ -32,6 +32,7 @@ import { ModelSelector } from '@/components/common'
 import type { TemplateConfig } from '@/hooks/useTemplates'
 import type { MatchResult } from '@/lib/recommendation'
 import type { CreateTaskInput } from '@/services/tasks'
+import { useGoiFormPrefill } from '@/hooks/useGoiFormPrefill'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -56,6 +57,13 @@ export function CreateTaskForm() {
   // 模板相关状态
   const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false)
   const [saveTemplateOpen, setSaveTemplateOpen] = useState(false)
+
+  // GOI 表单预填支持
+  useGoiFormPrefill(form, 'task-form', {
+    onPrefill: (data) => {
+      console.log('[CreateTaskForm] GOI prefill data:', data)
+    },
+  })
 
   // 加载选项数据
   const { data: promptsData, isLoading: promptsLoading } = usePrompts({ pageSize: 100 })
