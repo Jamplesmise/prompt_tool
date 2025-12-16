@@ -25,6 +25,16 @@ const nextConfig = {
         'aws4': 'commonjs aws4',
       })
     }
+
+    // Monaco Editor 本地化配置（解决 CDN 无法访问问题）
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      }
+    }
+
     return config
   },
 }
