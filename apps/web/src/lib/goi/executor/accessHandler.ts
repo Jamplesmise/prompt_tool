@@ -19,6 +19,7 @@ import { publishResourceAccessed } from '../../events'
 import { prisma } from '../../prisma'
 import { normalizeResourceType, systemPageTypes } from './shared'
 import { getCreateDialogId, getSelectorDialogId, getTestDialogId } from '../dialogIds'
+import { getFormIdForResource } from '../formStore'
 
 /**
  * 资源类型到 URL 路径的映射
@@ -235,15 +236,9 @@ export class AccessHandler {
     // 系统页面资源类型（不需要 resourceId）
     const isSystemPage = systemPageTypes.includes(operation.target.resourceType)
 
-    // 对于 view/edit 操作，需要 resourceId（create 不需要，系统页面也不需要）
-    if (['view', 'edit'].includes(operation.action) && !operation.target.resourceId) {
-      // 如果是 edit 但有 dialog: 'create' 上下文，允许不带 resourceId
-      const isCreateDialog = operation.context?.dialog === 'create'
-      // 系统页面也允许不带 resourceId
-      if (!isCreateDialog && !isSystemPage) {
-        errors.push(`resourceId is required for action: ${operation.action}`)
-      }
-    }
+    // 对于 view/edit 操作，如果没有 resourceId，将导航到列表页让用户选择
+    // 不再强制要求 resourceId，提供更好的用户体验
+    // 注意：这允许用户说"帮我查看提示词"而不需要指定具体哪个
 
     return { valid: errors.length === 0, errors }
   }
@@ -363,11 +358,21 @@ export class AccessHandler {
       }
 
       case 'create': {
-        // 打开创建弹窗（使用集中管理的弹窗 ID）
-        result.openedDialog = context?.dialog || getCreateDialogId(target.resourceType)
-        // 同时导航到列表页
+        // 获取创建页面/弹窗的路由
         const routeGenerator = routeMap[target.resourceType]
-        result.navigatedTo = routeGenerator(undefined, 'navigate')
+        const createUrl = routeGenerator(undefined, 'create')
+        const listUrl = routeGenerator(undefined, 'navigate')
+
+        // 如果 create 返回的是独立页面（如 /prompts/new），直接导航
+        // 如果返回的是列表页，说明需要通过弹窗创建
+        if (createUrl !== listUrl) {
+          // 独立创建页面，直接导航
+          result.navigatedTo = createUrl
+        } else {
+          // 弹窗创建，导航到列表页并打开弹窗
+          result.openedDialog = context?.dialog || getCreateDialogId(target.resourceType)
+          result.navigatedTo = listUrl
+        }
         break
       }
 
@@ -395,6 +400,16 @@ export class AccessHandler {
         const routeGenerator = routeMap[target.resourceType]
         result.navigatedTo = routeGenerator(target.resourceId, 'view')
         break
+      }
+    }
+
+    // 如果有表单预填数据，添加到结果中
+    if (context?.formData && Object.keys(context.formData).length > 0) {
+      result.formPrefill = {
+        formId: getFormIdForResource(target.resourceType),
+        resourceType: target.resourceType,
+        data: context.formData,
+        autoSubmit: context.autoSubmit,
       }
     }
 

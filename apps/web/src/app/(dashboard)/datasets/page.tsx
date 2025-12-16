@@ -30,6 +30,9 @@ import { DatasetUploadedTip } from '@/components/guidance'
 import { eventBus } from '@/lib/eventBus'
 import type { DatasetListItem } from '@/services/datasets'
 import { PRIMARY, GRAY, SEMANTIC } from '@/theme/colors'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { useGoiResourceListener } from '@/hooks/useGoiResourceListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -46,6 +49,16 @@ export default function DatasetsPage() {
   const { data, isLoading, error, refetch } = useDatasets({ page, pageSize, keyword })
   const deleteDataset = useDeleteDataset()
   const createDataset = useCreateDataset()
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_DATASET]: () => setUploadModalOpen(true),
+    [GOI_DIALOG_IDS.UPLOAD_DATASET]: () => setUploadModalOpen(true),
+    [GOI_DIALOG_IDS.TEMPLATE_DOWNLOAD]: () => setTemplateModalOpen(true),
+  })
+
+  // GOI 资源变更监听 - 自动刷新列表
+  useGoiResourceListener('dataset')
 
   // 加载状态
   if (isLoading && !data) {

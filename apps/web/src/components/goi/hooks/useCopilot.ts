@@ -24,6 +24,7 @@ import type {
 } from '@platform/shared'
 import type { TodoList, CheckpointResponseAction } from '@platform/shared'
 import { createInitialUnderstanding } from '@platform/shared'
+import { dispatchResourceChange } from '@/hooks/useGoiResourceListener'
 
 // ============================================
 // Zustand Store
@@ -211,6 +212,9 @@ export function useCopilot() {
 
   /**
    * 响应检查点
+   *
+   * 统一使用 agent checkpoint API，因为检查点是在 step() 中动态创建的，
+   * 不会添加到 CheckpointQueue 中
    */
   const respondCheckpoint = useCallback(
     async (
@@ -219,37 +223,110 @@ export function useCopilot() {
     ) => {
       if (!pendingCheckpoint) return
 
+      const { sessionId, mode } = useCopilotStore.getState()
+      const todoItem = pendingCheckpoint.todoItem as { id: string; checkpoint?: { type?: string } }
+      const checkpointType = todoItem?.checkpoint?.type
+
       setIsLoading(true)
       setError(null)
 
       try {
-        const response = await fetch(
-          `/api/goi/checkpoint/${pendingCheckpoint.id}/respond`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action,
-              modifications: options?.modifications,
-              reason: options?.reason,
-            }),
-          }
-        )
+        // 对于资源选择类型，提取选中的资源 ID
+        const selectedResourceId = checkpointType === 'resource_selection'
+          ? (options?.modifications?.selectedOptionId as string | undefined)
+          : undefined
 
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.message || 'Failed to respond')
+        // 统一使用 agent checkpoint API
+        const agentResponse = await fetch('/api/goi/agent/checkpoint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            itemId: todoItem.id,
+            action: action === 'modify' ? 'approve' : action,
+            feedback: options?.reason,
+            selectedResourceId,
+          }),
+        })
+
+        if (!agentResponse.ok) {
+          const data = await agentResponse.json()
+          throw new Error(data.message || 'Failed to respond to checkpoint')
         }
 
-        // 清除待处理检查点
-        setPendingCheckpoint(null)
+        const data = await agentResponse.json()
+        console.log('[Copilot] Checkpoint response:', data)
+
+        // 更新 todoList（现在从 data.data.todoList 获取）
+        if (data.data?.todoList) {
+          useCopilotStore.getState().setTodoList(data.data.todoList)
+        }
+
+        // 处理执行结果（导航、弹窗等）
+        const executionResult = data.data?.executionResult?.result
+        if (executionResult?.navigatedTo) {
+          console.log('[Copilot] Navigating to:', executionResult.navigatedTo)
+          router.push(executionResult.navigatedTo)
+        }
+
+        if (executionResult?.openedDialog) {
+          console.log('[Copilot] Opening dialog:', executionResult.openedDialog)
+          window.dispatchEvent(new CustomEvent('goi:openDialog', {
+            detail: { dialogId: executionResult.openedDialog }
+          }))
+        }
+
+        if (executionResult?.formPrefill) {
+          console.log('[Copilot] Prefilling form:', executionResult.formPrefill)
+          window.dispatchEvent(new CustomEvent('goi:prefillForm', {
+            detail: executionResult.formPrefill
+          }))
+        }
+
+        if (executionResult?.action && executionResult?.resourceType) {
+          console.log('[Copilot] Resource changed:', {
+            action: executionResult.action,
+            resourceType: executionResult.resourceType,
+            resourceId: executionResult.resourceId,
+          })
+          dispatchResourceChange(
+            executionResult.action,
+            executionResult.resourceType,
+            executionResult.resourceId,
+            executionResult.currentState
+          )
+        }
+
+        // 检查是否有新的检查点
+        if (data.data?.pendingCheckpoint) {
+          console.log('[Copilot] Setting new pending checkpoint:', data.data.pendingCheckpoint)
+          setPendingCheckpoint(data.data.pendingCheckpoint)
+        } else {
+          // 清除待处理检查点
+          setPendingCheckpoint(null)
+
+          // 如果没有新检查点且未完成，继续执行（assisted/auto 模式）
+          const stepDone = data.data?.done
+          const stepWaiting = data.data?.waiting
+          const status = data.data?.status?.status
+
+          if (!stepDone && !stepWaiting && status !== 'completed' && status !== 'failed') {
+            // 还有更多步骤，触发继续执行
+            if (mode === 'auto' || mode === 'assisted') {
+              console.log('[Copilot] Triggering continue execution after checkpoint approval')
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('goi:continueExecution'))
+              }, 300)
+            }
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error')
       } finally {
         setIsLoading(false)
       }
     },
-    [pendingCheckpoint, setIsLoading, setError, setPendingCheckpoint]
+    [pendingCheckpoint, setIsLoading, setError, setPendingCheckpoint, router]
   )
 
   /**
@@ -284,6 +361,7 @@ export function useCopilot() {
             goal: command,
             modelId: complexModelId,
             autoRun: false, // 不自动执行，由前端控制
+            mode, // 传递运行模式，用于后端判断是否自动批准检查点
             context: {
               currentPage,
             },
@@ -358,6 +436,35 @@ export function useCopilot() {
                   window.dispatchEvent(new CustomEvent('goi:openDialog', {
                     detail: { dialogId: executionResult.openedDialog }
                   }))
+                }
+
+                // 处理表单预填
+                if (executionResult?.formPrefill) {
+                  console.log('[Copilot] Prefilling form:', executionResult.formPrefill)
+                  window.dispatchEvent(new CustomEvent('goi:prefillForm', {
+                    detail: executionResult.formPrefill
+                  }))
+                }
+
+                // 处理资源变更（State 操作结果）
+                if (executionResult?.action && executionResult?.resourceType) {
+                  console.log('[Copilot] Resource changed:', {
+                    action: executionResult.action,
+                    resourceType: executionResult.resourceType,
+                    resourceId: executionResult.resourceId,
+                  })
+                  dispatchResourceChange(
+                    executionResult.action,
+                    executionResult.resourceType,
+                    executionResult.resourceId,
+                    executionResult.currentState
+                  )
+                }
+
+                // 处理检查点
+                if (stepData.data?.pendingCheckpoint) {
+                  console.log('[Copilot] Setting pending checkpoint:', stepData.data.pendingCheckpoint)
+                  useCopilotStore.getState().setPendingCheckpoint(stepData.data.pendingCheckpoint)
                 }
 
                 // 检查是否完成或等待用户
@@ -454,6 +561,35 @@ export function useCopilot() {
           }))
         }
 
+        // 处理表单预填
+        if (executionResult?.formPrefill) {
+          console.log('[Copilot] Prefilling form:', executionResult.formPrefill)
+          window.dispatchEvent(new CustomEvent('goi:prefillForm', {
+            detail: executionResult.formPrefill
+          }))
+        }
+
+        // 处理资源变更（State 操作结果）
+        if (executionResult?.action && executionResult?.resourceType) {
+          console.log('[Copilot] Resource changed:', {
+            action: executionResult.action,
+            resourceType: executionResult.resourceType,
+            resourceId: executionResult.resourceId,
+          })
+          dispatchResourceChange(
+            executionResult.action,
+            executionResult.resourceType,
+            executionResult.resourceId,
+            executionResult.currentState
+          )
+        }
+
+        // 处理检查点
+        if (data.data?.pendingCheckpoint) {
+          console.log('[Copilot] Setting pending checkpoint:', data.data.pendingCheckpoint)
+          useCopilotStore.getState().setPendingCheckpoint(data.data.pendingCheckpoint)
+        }
+
         return data.data
       } catch (err) {
         console.error('[Copilot] Failed to execute step:', err)
@@ -464,6 +600,95 @@ export function useCopilot() {
       }
     },
     [sessionId, setIsLoading, setError, router]
+  )
+
+  /**
+   * 确认 waiting 状态的任务已完成
+   * 当用户完成资源创建后调用此方法
+   */
+  const approveWaitingItem = useCallback(
+    async (itemId?: string) => {
+      const { sessionId, todoList } = useCopilotStore.getState()
+
+      if (!sessionId || !todoList) {
+        console.log('[Copilot] approveWaitingItem: no session or todoList')
+        return null
+      }
+
+      // 如果没有指定 itemId，找到第一个 waiting 状态的任务
+      const targetItemId = itemId || todoList.items.find(i => i.status === 'waiting')?.id
+
+      if (!targetItemId) {
+        console.log('[Copilot] approveWaitingItem: no waiting item found')
+        return null
+      }
+
+      console.log('[Copilot] Approving waiting item:', targetItemId)
+
+      try {
+        // 调用 checkpoint API 确认任务
+        const response = await fetch('/api/goi/agent/checkpoint', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            itemId: targetItemId,
+            action: 'approve',
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          console.error('[Copilot] Failed to approve item:', data.message)
+          return null
+        }
+
+        console.log('[Copilot] Item approved, result:', data)
+
+        // 更新 todoList
+        if (data.data?.status?.todoList) {
+          useCopilotStore.getState().setTodoList(data.data.status.todoList)
+        }
+
+        return data.data
+      } catch (err) {
+        console.error('[Copilot] Failed to approve waiting item:', err)
+        return null
+      }
+    },
+    []
+  )
+
+  /**
+   * 确认后继续执行
+   * 用于确认 waiting 任务后继续执行后续任务
+   * 使用事件机制避免循环依赖
+   */
+  const approveAndContinue = useCallback(
+    async (itemId?: string) => {
+      // 先确认
+      const result = await approveWaitingItem(itemId)
+      if (!result) return null
+
+      // 检查是否还有待执行的任务
+      const { todoList, mode } = useCopilotStore.getState()
+      if (!todoList) return result
+
+      const hasPendingItems = todoList.items.some(i => i.status === 'pending')
+
+      // 如果还有待执行的任务，且是 auto 或 assisted 模式，继续执行
+      if (hasPendingItems && (mode === 'auto' || mode === 'assisted')) {
+        console.log('[Copilot] Triggering continue execution after approval')
+        // 使用事件触发继续执行，避免循环依赖
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('goi:continueExecution'))
+        }, 300)
+      }
+
+      return result
+    },
+    [approveWaitingItem]
   )
 
   /**
@@ -517,6 +742,9 @@ export function useCopilot() {
 
   /**
    * 开始运行（执行所有步骤）
+   *
+   * 注意：这个函数在客户端循环调用 step API，而不是依赖服务端的 run API
+   * 因为导航操作需要在客户端执行 router.push()
    */
   const runExecution = useCallback(
     async () => {
@@ -529,31 +757,122 @@ export function useCopilot() {
       setError(null)
 
       try {
-        const response = await fetch('/api/goi/agent/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-        })
+        let done = false
+        let lastNavigatedTo: string | undefined
+        let maxSteps = 20 // 安全限制，防止无限循环
+        let stepCount = 0
+        let lastResult: unknown = null
 
-        const data = await response.json()
+        console.log('[Copilot] runExecution starting, sessionId:', sessionId)
 
-        if (!response.ok) {
-          throw new Error(data.message || '开始执行失败')
+        // 循环执行直到完成
+        while (!done && stepCount < maxSteps) {
+          stepCount++
+          console.log('[Copilot] Executing step', stepCount)
+
+          const stepResponse = await fetch('/api/goi/agent/step', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId }),
+          })
+
+          const stepData = await stepResponse.json()
+          console.log('[Copilot] Step result:', stepData)
+
+          if (!stepResponse.ok) {
+            throw new Error(stepData.message || '执行步骤失败')
+          }
+
+          // 更新 todoList 状态
+          const todoList = stepData.data?.todoList
+          if (todoList) {
+            useCopilotStore.getState().setTodoList(todoList)
+            console.log('[Copilot] TodoList updated:', {
+              status: todoList.status,
+              total: todoList.totalItems,
+              completed: todoList.completedItems,
+            })
+          }
+
+          // 收集导航结果
+          const executionResult = stepData.data?.executionResult?.result
+          if (executionResult?.navigatedTo) {
+            lastNavigatedTo = executionResult.navigatedTo
+            console.log('[Copilot] Navigation pending:', lastNavigatedTo)
+          }
+
+          // 立即处理弹窗打开（不等待循环结束）
+          if (executionResult?.openedDialog) {
+            console.log('[Copilot] Opening dialog:', executionResult.openedDialog)
+            window.dispatchEvent(new CustomEvent('goi:openDialog', {
+              detail: { dialogId: executionResult.openedDialog }
+            }))
+          }
+
+          // 处理表单预填
+          if (executionResult?.formPrefill) {
+            console.log('[Copilot] Prefilling form:', executionResult.formPrefill)
+            window.dispatchEvent(new CustomEvent('goi:prefillForm', {
+              detail: executionResult.formPrefill
+            }))
+          }
+
+          // 处理资源变更（State 操作结果）
+          if (executionResult?.action && executionResult?.resourceType) {
+            console.log('[Copilot] Resource changed:', {
+              action: executionResult.action,
+              resourceType: executionResult.resourceType,
+              resourceId: executionResult.resourceId,
+            })
+            dispatchResourceChange(
+              executionResult.action,
+              executionResult.resourceType,
+              executionResult.resourceId,
+              executionResult.currentState
+            )
+          }
+
+          // 处理检查点
+          if (stepData.data?.pendingCheckpoint) {
+            console.log('[Copilot] Setting pending checkpoint:', stepData.data.pendingCheckpoint)
+            useCopilotStore.getState().setPendingCheckpoint(stepData.data.pendingCheckpoint)
+          }
+
+          // 检查是否完成或等待用户
+          const status = stepData.data?.status?.status
+          const stepDone = stepData.data?.done
+          const stepWaiting = stepData.data?.waiting
+          const stepError = stepData.data?.error
+
+          console.log('[Copilot] Step status check:', {
+            stepDone,
+            stepWaiting,
+            agentStatus: status,
+            stepError,
+          })
+
+          done = stepDone ||
+                 stepWaiting ||
+                 status === 'completed' ||
+                 status === 'failed' ||
+                 false
+
+          lastResult = stepData.data
+
+          // 如果还没完成，短暂延迟后继续
+          if (!done) {
+            await new Promise(resolve => setTimeout(resolve, 200))
+          }
         }
 
-        // 更新 TODO List 状态
-        if (data.data?.todoList) {
-          useCopilotStore.getState().setTodoList(data.data.todoList)
+        // 执行最后的导航
+        if (lastNavigatedTo) {
+          console.log('[Copilot] Navigating to:', lastNavigatedTo)
+          router.push(lastNavigatedTo)
         }
 
-        // 处理导航结果（最后一步的结果）
-        const lastResult = data.data?.lastExecutionResult?.result
-        if (lastResult?.navigatedTo) {
-          console.log('[Copilot] Navigating to:', lastResult.navigatedTo)
-          router.push(lastResult.navigatedTo)
-        }
-
-        return data.data
+        console.log('[Copilot] runExecution finished, steps:', stepCount, 'navigatedTo:', lastNavigatedTo)
+        return lastResult
       } catch (err) {
         console.error('[Copilot] Failed to run:', err)
         setError(err instanceof Error ? err.message : '执行失败')
@@ -591,6 +910,8 @@ export function useCopilot() {
     pauseExecution,
     resumeExecution,
     runExecution,
+    approveWaitingItem,
+    approveAndContinue,
     setComplexModelId,
     setSimpleModelId,
     clearError: () => setError(null),

@@ -12,7 +12,7 @@
  * - 模型配置（存储在 Zustand store 中）
  */
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { FloatButton, Divider, Space, Tag } from 'antd'
 import {
   RobotOutlined,
@@ -29,6 +29,7 @@ import { ModeSelector } from './ModeSelector'
 import { CommandInput } from './CommandInput'
 import { ModelConfig } from './ModelConfig'
 import { useCopilot } from '../hooks/useCopilot'
+import { useResourceCreationDetector } from '../hooks/useResourceCreationDetector'
 import { ExecutionControls } from '../ExecutionControls'
 import { PauseStatusPanel } from '../PauseStatusPanel'
 import { useExecutionStore } from '@/lib/goi/execution/progressSync'
@@ -56,7 +57,24 @@ export const CopilotPanel: React.FC<CopilotPanelProps> = ({
     todoList,
     contextUsage,
     isLoading,
+    runExecution,
   } = useCopilot()
+
+  // 自动检测资源创建完成
+  useResourceCreationDetector()
+
+  // 监听继续执行事件
+  useEffect(() => {
+    const handleContinueExecution = () => {
+      console.log('[CopilotPanel] Received goi:continueExecution event')
+      runExecution()
+    }
+
+    window.addEventListener('goi:continueExecution', handleContinueExecution)
+    return () => {
+      window.removeEventListener('goi:continueExecution', handleContinueExecution)
+    }
+  }, [runExecution])
 
   // 执行状态
   const { status: executionStatus } = useExecutionStore()

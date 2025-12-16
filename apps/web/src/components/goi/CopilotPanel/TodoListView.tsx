@@ -25,6 +25,7 @@ import {
   PauseCircleOutlined,
   StepForwardOutlined,
   ExclamationCircleFilled,
+  CheckOutlined,
 } from '@ant-design/icons'
 import { useCopilot } from '../hooks/useCopilot'
 import { generateDisplayData, autoCollapseGroups, toggleGroupCollapse } from '@/lib/goi/todo/groupGenerator'
@@ -81,6 +82,81 @@ const STATUS_CONFIG: Record<
 }
 
 // ============================================
+// 结果摘要格式化
+// ============================================
+
+/**
+ * 根据操作类型格式化结果摘要
+ */
+function formatResultSummary(
+  category: 'access' | 'state' | 'observation' | undefined,
+  result: unknown
+): string | null {
+  if (!result || !category) return null
+
+  const r = result as Record<string, unknown>
+
+  switch (category) {
+    case 'access': {
+      // Access: 显示导航到的页面/打开的弹窗
+      if (r.navigatedTo) {
+        return `→ ${r.navigatedTo}`
+      }
+      if (r.openedDialog) {
+        return `打开: ${r.openedDialog}`
+      }
+      return null
+    }
+
+    case 'state': {
+      // State: 显示创建/更新/删除的资源
+      const resourceId = r.resourceId as string | undefined
+      const action = r.action as string | undefined
+      const data = r.currentState as Record<string, unknown> | undefined
+
+      if (action === 'create' && resourceId) {
+        const name = data?.name as string | undefined
+        return name ? `创建: ${name}` : `ID: ${resourceId.substring(0, 8)}...`
+      }
+      if (action === 'update') {
+        const changedFields = r.changedFields as string[] | undefined
+        return changedFields?.length
+          ? `更新: ${changedFields.join(', ')}`
+          : '已更新'
+      }
+      if (action === 'delete') {
+        return '已删除'
+      }
+      return null
+    }
+
+    case 'observation': {
+      // Observation: 显示查询结果摘要
+      const results = r.results as Array<Record<string, unknown>> | undefined
+      if (!results || results.length === 0) return '无结果'
+
+      // 统计查询到的数量
+      let totalItems = 0
+      for (const queryResult of results) {
+        const data = queryResult.data
+        if (Array.isArray(data)) {
+          totalItems += data.length
+        } else if (data) {
+          totalItems += 1
+        }
+      }
+
+      if (totalItems === 0) return '无结果'
+      if (totalItems === 1) return '找到 1 条记录'
+      return `找到 ${totalItems} 条记录`
+    }
+
+    default:
+      return null
+  }
+}
+
+// ============================================
 // 子组件：单个 TODO 项
 // ============================================
 
@@ -91,6 +167,11 @@ type TodoItemViewProps = {
 
 const TodoItemView: React.FC<TodoItemViewProps> = ({ item, onClick }) => {
   const config = STATUS_CONFIG[item.status]
+
+  // 格式化结果摘要
+  const resultSummary = item.status === 'completed'
+    ? formatResultSummary(item.category, item.result)
+    : null
 
   return (
     <div
@@ -117,6 +198,22 @@ const TodoItemView: React.FC<TodoItemViewProps> = ({ item, onClick }) => {
           <span className={styles.todoValueLabel}>{item.valueLabel}</span>
         )}
         {item.hint && <div className={styles.todoHint}>{item.hint}</div>}
+        {/* 结果摘要展示 */}
+        {resultSummary && (
+          <div className={styles.todoResultSummary}>
+            <Text type="success" style={{ fontSize: 11 }}>
+              {resultSummary}
+            </Text>
+          </div>
+        )}
+        {/* 错误信息展示 */}
+        {item.status === 'failed' && item.error && (
+          <div className={styles.todoErrorMessage}>
+            <Text type="danger" style={{ fontSize: 11 }}>
+              {item.error}
+            </Text>
+          </div>
+        )}
       </div>
       {item.isKeyStep && (
         <Tag color="gold" className={styles.keyBadge}>
@@ -195,6 +292,7 @@ export const TodoListView: React.FC = () => {
     pauseExecution,
     resumeExecution,
     runExecution,
+    approveAndContinue,
   } = useCopilot()
 
   // 将 todoList 转换为展示数据
@@ -231,6 +329,10 @@ export const TodoListView: React.FC = () => {
   const isPaused = todoList?.status === 'paused'
   const isReady = todoList?.status === 'ready'
   const canStartExecution = isReady && !isRunning && todoList && todoList.completedItems === 0
+
+  // 检测是否有 waiting 状态的任务（需要用户手动确认）
+  const waitingItem = todoList?.items.find(i => i.status === 'waiting')
+  const hasWaitingItem = !!waitingItem
 
   // 空状态
   if (!displayData) {
@@ -290,8 +392,39 @@ export const TodoListView: React.FC = () => {
         />
       </div>
 
+      {/* 等待用户确认区域 */}
+      {hasWaitingItem && waitingItem && (
+        <div
+          style={{
+            marginBottom: 12,
+            padding: '12px',
+            backgroundColor: '#fffbe6',
+            border: '1px solid #ffe58f',
+            borderRadius: '6px',
+          }}
+        >
+          <div style={{ marginBottom: 8 }}>
+            <ClockCircleOutlined style={{ color: '#faad14', marginRight: 8 }} />
+            <Text strong>等待确认：</Text>
+            <Text>{waitingItem.title}</Text>
+          </div>
+          <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+            请完成上述操作后，点击下方按钮确认
+          </div>
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckOutlined />}
+            onClick={() => approveAndContinue(waitingItem.id)}
+            loading={isLoading}
+          >
+            确认已完成，继续执行
+          </Button>
+        </div>
+      )}
+
       {/* 执行控制按钮 */}
-      {canStep && (
+      {canStep && !hasWaitingItem && (
         <div style={{ marginBottom: 12 }}>
           <Space size="small">
             {canStartExecution && mode !== 'auto' && (

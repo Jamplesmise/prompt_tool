@@ -94,6 +94,21 @@ export async function POST(request: NextRequest) {
     // 执行单步
     const stepResult = await agentLoop.step()
 
+    // 如果返回 waiting 状态且有 currentItem，构建检查点信息
+    let pendingCheckpoint = null
+    if (stepResult.waiting && stepResult.currentItem) {
+      const item = stepResult.currentItem
+      if (item.checkpoint?.required) {
+        pendingCheckpoint = {
+          id: `checkpoint-${item.id}-${Date.now()}`,
+          todoItem: item,
+          reason: item.checkpoint.message || '需要用户确认',
+          options: (item.checkpoint as { options?: Array<{ id: string; label: string; description?: string }> }).options || [],
+          createdAt: new Date(),
+        }
+      }
+    }
+
     return NextResponse.json({
       code: 200,
       message: 'success',
@@ -101,6 +116,7 @@ export async function POST(request: NextRequest) {
         ...stepResult,
         status: agentLoop.getStatus(),
         todoList: agentLoop.getTodoList(), // 返回完整的 todoList
+        pendingCheckpoint, // 包含检查点信息
       },
     })
   } catch (error) {

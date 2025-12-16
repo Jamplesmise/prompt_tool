@@ -22,11 +22,35 @@ import type {
 import { AccessHandler, executeAccess } from './accessHandler'
 import { StateHandler, executeState } from './stateHandler'
 import { ObservationHandler, executeObservation } from './observationHandler'
+import {
+  resolveVariables,
+  createStepResults,
+  addStepResult,
+  type VariableStepResults,
+  type VariableResolverContext,
+} from './variableResolver'
 
 // 重新导出所有 Handler
 export { AccessHandler, executeAccess, resolveTargetUrl } from './accessHandler'
 export { StateHandler, executeState, getCurrentState } from './stateHandler'
 export { ObservationHandler, executeObservation, querySingle, clearSessionCache } from './observationHandler'
+
+// 重新导出变量解析器
+export {
+  resolveVariables,
+  resolveStringVariables,
+  resolveVariable,
+  getNestedValue,
+  hasVariableReference,
+  extractVariableReferences,
+  getReferencedStepIds,
+  createStepResults,
+  addStepResult,
+  clearStepResults,
+  type VariableStepResults,
+  type VariableStepResult,
+  type VariableResolverContext,
+} from './variableResolver'
 
 // 重新导出类型
 export type { GoiExecutionResult } from '@platform/shared'
@@ -77,6 +101,8 @@ export class GoiExecutor {
   private accessHandler: AccessHandler
   private stateHandler: StateHandler
   private observationHandler: ObservationHandler
+  /** 步骤执行结果存储（用于变量引用解析） */
+  private stepResults: VariableStepResults
 
   constructor(context: GoiExecutorContext) {
     this.context = {
@@ -104,28 +130,68 @@ export class GoiExecutor {
       userId: context.userId,
       teamId: context.teamId,
     })
+
+    // 初始化步骤结果存储
+    this.stepResults = createStepResults()
   }
 
   /**
-   * 执行 GOI 操作
+   * 重置步骤结果（用于新的 TODO List 执行）
+   */
+  resetStepResults(): void {
+    this.stepResults.clear()
+  }
+
+  /**
+   * 获取步骤结果存储（用于调试和测试）
+   */
+  getStepResults(): VariableStepResults {
+    return this.stepResults
+  }
+
+  /**
+   * 执行 GOI 操作（支持变量解析）
+   *
+   * @param operation - GOI 操作
+   * @param options - 执行选项
+   * @param stepContext - 步骤上下文（用于变量解析）
    */
   async execute<T extends GoiOperationType>(
     operation: GoiOperation,
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
+    stepContext?: { stepId: string; stepIndex: number; stepIdOrder?: string[] }
   ): Promise<GoiExecutionResult<T>> {
     const startTime = Date.now()
 
+    // 1. 如果有步骤上下文，先解析变量引用
+    let resolvedOperation = operation
+    if (stepContext && this.stepResults.size > 0) {
+      const variableContext: VariableResolverContext = {
+        currentStepIndex: stepContext.stepIndex,
+        currentStepId: stepContext.stepId,
+        stepIdOrder: stepContext.stepIdOrder,
+      }
+      resolvedOperation = resolveVariables(operation, this.stepResults, variableContext) as GoiOperation
+
+      if (this.context.enableLogging) {
+        console.log(`[GoiExecutor] Resolved variables for step ${stepContext.stepId}`, {
+          original: this.sanitizeForLog(operation),
+          resolved: this.sanitizeForLog(resolvedOperation),
+        })
+      }
+    }
+
     // 日志记录
     if (this.context.enableLogging) {
-      console.log(`[GoiExecutor] Executing ${operation.type} operation`, {
+      console.log(`[GoiExecutor] Executing ${resolvedOperation.type} operation`, {
         sessionId: this.context.sessionId,
-        operation: this.sanitizeForLog(operation),
+        operation: this.sanitizeForLog(resolvedOperation),
       })
     }
 
-    // 1. 执行前校验
+    // 2. 执行前校验
     if (this.context.enablePreValidation && !options.skipPreCheck) {
-      const validation = this.validateOperation(operation)
+      const validation = this.validateOperation(resolvedOperation)
       if (!validation.valid) {
         return {
           success: false,
@@ -138,11 +204,11 @@ export class GoiExecutor {
       }
     }
 
-    // 2. 执行操作（带超时）
+    // 3. 执行操作（带超时）
     let result: GoiExecutionResult<T>
 
     try {
-      const executePromise = this.dispatchOperation(operation) as Promise<GoiExecutionResult<T>>
+      const executePromise = this.dispatchOperation(resolvedOperation) as Promise<GoiExecutionResult<T>>
 
       if (options.timeout) {
         result = await Promise.race([
@@ -163,13 +229,13 @@ export class GoiExecutor {
       } as GoiExecutionResult<T>
     }
 
-    // 3. 执行后验证
+    // 4. 执行后验证
     if (
       this.context.enablePostValidation &&
       !options.skipPostValidation &&
       result.success
     ) {
-      const postValidation = await this.postValidate(operation, result)
+      const postValidation = await this.postValidate(resolvedOperation, result)
       if (!postValidation.valid) {
         // 后置验证失败，标记为部分成功
         result.status = 'partial'
@@ -177,9 +243,19 @@ export class GoiExecutor {
       }
     }
 
-    // 4. 日志记录
+    // 5. 存储步骤结果（用于后续步骤的变量引用）
+    if (stepContext) {
+      addStepResult(
+        this.stepResults,
+        stepContext.stepId,
+        result.result,
+        result.success ? 'success' : 'failed'
+      )
+    }
+
+    // 6. 日志记录
     if (this.context.enableLogging) {
-      console.log(`[GoiExecutor] Completed ${operation.type} operation`, {
+      console.log(`[GoiExecutor] Completed ${resolvedOperation.type} operation`, {
         sessionId: this.context.sessionId,
         success: result.success,
         duration: result.duration,

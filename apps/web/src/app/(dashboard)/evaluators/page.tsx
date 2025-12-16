@@ -13,6 +13,8 @@ import {
 import type { EvaluatorDetail } from '@/components/evaluator'
 import { useEvaluators } from '@/hooks/useEvaluators'
 import { PRESET_EVALUATORS } from '@/constants/evaluators'
+import { useGoiDialogListener } from '@/hooks/useGoiDialogListener'
+import { GOI_DIALOG_IDS } from '@/lib/goi/dialogIds'
 
 const { Title } = Typography
 
@@ -24,6 +26,17 @@ export default function EvaluatorsPage() {
   // 获取自定义评估器
   const { data: evaluators } = useEvaluators()
   const customEvaluators = evaluators?.filter((e) => !e.isPreset) || []
+
+  // GOI 弹窗事件监听
+  useGoiDialogListener({
+    [GOI_DIALOG_IDS.CREATE_EVALUATOR]: () => router.push('/evaluators/new'),
+    [GOI_DIALOG_IDS.EVALUATOR_DETAIL]: () => {
+      // 打开第一个预置评估器的详情
+      if (PRESET_EVALUATORS.length > 0) {
+        setDetailEvaluator(PRESET_EVALUATORS[0])
+      }
+    },
+  })
 
   const handleCreate = () => {
     router.push('/evaluators/new')

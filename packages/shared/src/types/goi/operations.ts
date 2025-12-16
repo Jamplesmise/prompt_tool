@@ -57,6 +57,10 @@ export type AccessContext = {
   tab?: string
   /** 额外查询参数 */
   query?: Record<string, string>
+  /** 表单预填数据（用于 create/edit 操作自动填充表单） */
+  formData?: Record<string, unknown>
+  /** 是否自动提交表单（默认 false，让用户确认） */
+  autoSubmit?: boolean
 }
 
 /**
@@ -229,12 +233,23 @@ export type AccessExecutionResult = {
   openedDialog?: string
   /** 资源是否存在 */
   resourceFound: boolean
+  /** 表单预填数据 */
+  formPrefill?: {
+    formId: string
+    resourceType: string
+    data: Record<string, unknown>
+    autoSubmit?: boolean
+  }
 }
 
 /**
  * State 操作执行结果
  */
 export type StateExecutionResult = {
+  /** 操作动作 */
+  action?: 'create' | 'update' | 'delete'
+  /** 资源类型 */
+  resourceType?: string
   /** 操作前的状态（用于回滚） */
   previousState?: Record<string, unknown>
   /** 操作后的状态 */
